@@ -47,7 +47,7 @@ cards <- list(
     card_header("ANOVA Table"), 
     min_height = 10, 
     tableOutput("anova")
-    ),
+  ),
   card(
     card_header("Factorial Design Table"),
     min_height = 10,
@@ -59,7 +59,6 @@ cards <- list(
     plotlyOutput("factorial")
   ),
   card(
-    
     h5("Healthy Habits Circle Simulated Experiment Design", style = "font-weight: bold;"),
     p("2³ factorial design with the following factors:"),
     
@@ -114,11 +113,11 @@ ui <- page_sidebar(
           "phys",
           "Select the following subfactors:",
           choices = c("Nutrition", "Sleep", "Exercise"),
-          selected = c("Nutrition", "Sleep"),
+          selected = c("Sleep"),
           size = 'sm',
         ),
-        div(
-          id = "nutrition",
+        conditionalPanel(
+          condition = "input.phys.includes('Nutrition')",
           card(
             card_header("Nutrition"),
             sliderTextInput(
@@ -165,8 +164,8 @@ ui <- page_sidebar(
             ),
           )
         ),
-        div(
-          id = "sleep",
+        conditionalPanel(
+          condition = "input.phys.includes('Sleep')",
           card(
             card_header("Sleep"),
             sliderInput(
@@ -207,8 +206,8 @@ ui <- page_sidebar(
           ),
           # Added missing comma here
         ),
-        div(
-          id = "exercise",
+        conditionalPanel(
+          condition = "input.phys.includes('Exercise')",
           card(
             card_header("Exercise"),
             sliderTextInput(
@@ -216,56 +215,56 @@ ui <- page_sidebar(
               "Choose the intensity of Swimming:",
               grid = TRUE,
               force_edges = TRUE,
-              choices = c("Moderate", "Intense")
+              choices = c("None","Moderate", "Intense")
             ),
             sliderTextInput(
               "run_slider",
               "Choose the intensity of Running:",
               grid = TRUE,
               force_edges = TRUE,
-              choices = c("Moderate", "Intense")
+              choices = c("None","Moderate", "Intense")
             ),
             sliderTextInput(
               "walk_slider",
               "Choose the intensity of Walking:",
               grid = TRUE,
               force_edges = TRUE,
-              choices = c("Moderate", "Intense")
+              choices = c("None","Moderate", "Intense")
             ),
             sliderTextInput(
               "hike_slider",
               "Choose the intensity of Hiking:",
               grid = TRUE,
               force_edges = TRUE,
-              choices = c("Moderate", "Intense")
+              choices = c("None","Moderate", "Intense")
             ),
             sliderTextInput(
               "bike_slider",
               "Choose the intensity of Biking:",
               grid = TRUE,
               force_edges = TRUE,
-              choices = c("Moderate", "Intense")
+              choices = c("None","Moderate", "Intense")
             ),
             sliderTextInput(
               "team_slider",
               "Choose the intensity of Team Sport:",
               grid = TRUE,
               force_edges = TRUE,
-              choices = c("Moderate", "Intense")
+              choices = c("None","Moderate", "Intense")
             ),
             sliderTextInput(
-              "weight_slider",
+              "lifting_slider",
               "Choose the intensity of Weightlifting:",
               grid = TRUE,
               force_edges = TRUE,
-              choices = c("Moderate", "Intense")
+              choices = c("None","Moderate", "Intense")
             ),
             sliderTextInput(
               "other_exerc_slider",
               "Choose the intensity of Other Exercise:",
               grid = TRUE,
               force_edges = TRUE,
-              choices = c("Moderate", "Intense")
+              choices = c("None","Moderate", "Intense")
             ),
           )
         ),
@@ -278,7 +277,7 @@ ui <- page_sidebar(
             "socialhours_slider",
             "Specify amount of hours socializing with non-friends per week:",
             min = 0,
-            max = 21,
+            max = 20,
             value = 10
           ),
           sliderInput(
@@ -323,7 +322,7 @@ ui <- page_sidebar(
             value = 2
           )
         )
-
+        
       ),
       accordion_panel(
         "Spiritual Health",
@@ -379,15 +378,20 @@ ui <- page_sidebar(
             value = 2
           )
         )
-
+        
       ),
     ),
   ),
   tabsetPanel(
-    tabPanel(title = "Introduction", cards[[5]]),
-    tabPanel(title = "Interaction Plot", cards[[1]]),
-    tabPanel(title = "Design Cube(s)", cards[[4]]),
-    layout_columns(cards[[3]], cards[[2]], col_widths = c(4,8))
+    id = "tabs",
+    tabPanel(title = "Introduction", value = "intro", cards[[5]]),
+    tabPanel(title = "Interaction Plot", value = "interaction", cards[[1]]),
+    tabPanel(title = "Design Cube(s)",value = "cube", cards[[4]]),
+    conditionalPanel(
+      condition = "input.tabs != 'intro'",
+      layout_columns(cards[[3]], cards[[2]], col_widths = c(4,8))
+    )
+    
   )
   
 )
@@ -406,34 +410,6 @@ server <- function(input, output) {
     health_value = NULL
   )
   
-  
-  # Hide all the Sliders by default
-  observe({
-    isolate({
-      shinyjs::hide("nutrition")
-      shinyjs::hide("sleep")
-      shinyjs::hide("exercise")
-    })
-  })
-
-  observeEvent(input$phys, {
-    # Hides all the Sliders
-    shinyjs::hide("nutrition")
-    shinyjs::hide("sleep")
-    shinyjs::hide("exercise")
-
-    # Dynamically shows slider based on which Subfactor is chosen:
-    if ("Nutrition" %in% input$phys) {
-      shinyjs::show("nutrition")
-    }
-    if ("Sleep" %in% input$phys) {
-      shinyjs::show("sleep")
-    }
-    if ("Exercise" %in% input$phys) {
-      shinyjs::show("exercise")
-    }
-  })
-
   labelFactors <- function(user_input, num_factors) {
     #NOTE: Change the Low/High based on the Factors:
     sleepLabels <- list("Insufficient", "Sufficient")
@@ -893,7 +869,7 @@ server <- function(input, output) {
                        trace.label = factorBLabel)
     }
     
-
+    
   })
   
   output$factorial <- renderPlotly({
