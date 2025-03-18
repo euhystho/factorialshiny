@@ -59,6 +59,16 @@ cards <- list(
     plotlyOutput("factorial")
   ),
   card(
+    card_header("Assumptions"),
+    min_height = 625,
+    plotlyOutput("Assumptions")
+  ),
+  card(
+    card_header("Effects"),
+    min_height = 625,
+    plotOutput("effects_Plot")
+  ),
+  card(
     
     h5("Healthy Habits Circle Simulated Experiment Design", style = "font-weight: bold;"),
     p("2³ factorial design with the following factors:"),
@@ -1056,6 +1066,44 @@ server <- function(input, output) {
     
     plot
   })
+  output$effects_plot <- renderPlot({
+      model <- getModel()
+      
+      # Extract coefficients (half effects)
+      coeffs <- coef(model)[-1]  # Remove intercept
+      
+      # Create half-normal plot of effects
+      par(mfrow = c(1, 2))
+      
+      # Normal plot
+      qqnorm(coeffs, main = "Normal Plot of Effects", 
+             xlab = "Normal Scores", ylab = "Estimated Effects", 
+             pch = 16, col = "blue")
+      abline(lm(sort(coeffs) ~ qnorm(ppoints(length(coeffs)))))
+      
+      # Half-normal plot
+      abs_coeffs <- abs(coeffs)
+      qqnorm(abs_coeffs, main = "Half-Normal Plot of Effects", 
+             xlab = "Half-Normal Scores", ylab = "Absolute Effects", 
+             pch = 16, col = "red", plot.it = FALSE)
+      plot_data <- qqnorm(abs_coeffs, plot.it = FALSE)
+      plot(plot_data$x, plot_data$y, main = "Half-Normal Plot of Effects", 
+           xlab = "Half-Normal Scores", ylab = "Absolute Effects", 
+           pch = 16, col = "red")
+      
+      # Add labels for significant effects
+      parnames <- names(coeffs)
+      labeled <- abs_coeffs > (2 * sd(abs_coeffs))
+      if (any(labeled)) {
+        text(plot_data$x[labeled], plot_data$y[labeled], 
+             labels = parnames[labeled], pos = 2)
+      }
+  })
+  
+  output$assumptions <-renderPlot({
+    
+    
+  })
   
   output$anova <- renderUI({
     if (length(input$phys) < 2){
@@ -1093,6 +1141,7 @@ server <- function(input, output) {
       # Remove the separate significance column
       anova_df$Significance <- NULL
     }
+    
     
     # Get all factor names
     selected_factors <- input$phys
