@@ -66,7 +66,7 @@ cards <- list(
   card(
     card_header("Effects"),
     min_height = 625,
-    plotOutput("effects_Plot")
+    plotOutput("effects_plot")
   ),
   card(
     
@@ -124,7 +124,7 @@ ui <- page_sidebar(
           "phys",
           "Select the following subfactors:",
           choices = c("Nutrition", "Sleep", "Exercise"),
-          selected = c("Sleep"),
+          selected = c("Nutrition","Sleep"),
           size = 'sm',
         ),
         conditionalPanel(
@@ -395,9 +395,11 @@ ui <- page_sidebar(
   ),
   tabsetPanel(
     id = "tabs",
-    tabPanel(title = "Introduction", value = "intro", cards[[5]]),
-    tabPanel(title = "Interaction Plot", value = "interaction", cards[[1]]),
+    tabPanel(title = "Introduction", value = "intro", cards[[7]]),
     tabPanel(title = "Design Cube(s)",value = "cube", cards[[4]]),
+    tabPanel(title = "Assumptions", value = "assumption", cards[[5]]),
+    tabPanel(title = "Interaction Plot", value = "interaction", cards[[1]]),
+    tabPanel(title = "Effects", value = "effect", cards[[6]]),
     conditionalPanel(
       condition = "input.tabs != 'intro'",
       layout_columns(cards[[3]], cards[[2]], col_widths = c(4,8))
@@ -1043,7 +1045,12 @@ server <- function(input, output) {
     
     plot
   })
+  
   output$effects_plot <- renderPlot({
+    
+    #TODO: Debug the Model and Make sure it's in the same format as
+    #design.R :)
+    
       model <- getModel()
       
       # Extract coefficients (half effects)

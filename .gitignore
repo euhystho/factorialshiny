@@ -136,3 +136,5 @@ shinyapp/.Rproj.user/shared/notebooks/7AE32961-2k Factor Design/1/s/lib/typedarr
 shinyapp/.Rproj.user/shared/notebooks/patch-chunk-names
 shinyapp/.Rproj.user/shared/notebooks/paths
 .DS_Store
+shinyapp/.RData
+shinyapp/.Rhistory
