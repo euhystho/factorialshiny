@@ -114,8 +114,6 @@ server <- function(input, output, session) {
   # Fit model reactive
   getModel <- reactive({
     df <- getData()
-    
-    options(contrasts = c("contr.sum","contr.poly"))
     # Create model using contr.FrF2 for proper coding
     model <- lm(y ~ A*B*C, data = df, 
                 contrasts = list(A = contr.FrF2, B = contr.FrF2, C = contr.FrF2))

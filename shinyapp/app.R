@@ -20,6 +20,7 @@ library(dae)
 
 #Factorial Design related libraries
 library(AlgDesign)
+library(DoE.base)
 
 
 cards <- list(
@@ -41,12 +42,11 @@ cards <- list(
       ),
       plotOutput("interaction_plot")
     ),
-    
   ),
   card(
     card_header("ANOVA Table"), 
     min_height = 10, 
-    tableOutput("anova")
+    uiOutput("anova")
   ),
   card(
     card_header("Factorial Design Table"),
@@ -69,27 +69,26 @@ cards <- list(
     plotOutput("effects_plot")
   ),
   card(
-    
     h5("Healthy Habits Circle Simulated Experiment Design", style = "font-weight: bold;"),
     p("2³ factorial design with the following factors:"),
     
     tags$div(
       style = "margin-left: 15px;",
-      HTML("<b>Nutrition:</b> <i>Nutrition Intention</i>"),
+      HTML("<b>Nutrition:</b>"),
       tags$ul(
-        tags$li(HTML("Mindless: Not planning and practicing mindful eating habits")),
-        tags$li("Purposeful: Tracking calories and practicing mindful eating habits")
+        tags$li(HTML("Purposeful: Tracking calories or practicing healthy eating habits")),
+        tags$li("Mindless: Not planning or practicing healthy eating habits")
       ),
-      HTML("<b>Sleep:</b> <i>Sleep Hours</i>"),
+      HTML("<b>Sleep:</b>"),
       tags$ul(
-        tags$li("Insufficient: < 7 hours of sleep"),
-        tags$li("Sufficient: >= 7 hours of sleep")
+        tags$li("Sufficient:  7 hours of sleep"),
+        tags$li("Insufficient: < 7 hours of sleep")
       ), 
       
       HTML("<b>Exercise:</b> <i>Exercise Intensity</i>"),
       tags$ul(
-        tags$li("Moderate: Engaging in less-strenuous activities"),
-        tags$li("Intense: Engaging in more-strenuous activities")
+        tags$li("Intense: Engaging in more-strenuous activities"),
+        tags$li("Light: Engaging in non-strenuous actvities or no exercise")
       )
     ),
     
@@ -395,7 +394,7 @@ ui <- page_sidebar(
   ),
   tabsetPanel(
     id = "tabs",
-    tabPanel(title = "Introduction", value = "intro", cards[[7]]),
+    tabPanel(title = "Introduction", value = "intro", intro_card),
     tabPanel(title = "Design Cube(s)",value = "cube", cards[[4]]),
     tabPanel(title = "Assumptions", value = "assumption",
              page_navbar(
@@ -407,8 +406,12 @@ ui <- page_sidebar(
     tabPanel(title = "Interaction Plot", value = "interaction", cards[[1]]),
     tabPanel(title = "Effects", value = "effect", cards[[6]]),
     conditionalPanel(
-      condition = "input.tabs != 'intro'",
+      condition = "input.tabs != 'intro' & input.tabs != 'effect'",
       layout_columns(cards[[3]], cards[[2]], col_widths = c(4,8))
+    ),
+    conditionalPanel(
+      condition = "input.tabs == 'effect'",
+      uiOutput("effects_output")
     )
     
   )
@@ -661,6 +664,27 @@ server <- function(input, output) {
       f$result <- aov(H ~ A * B)
       
     }
+  })
+  
+  getModel <- reactive({
+    numSelectedFactors = length(input$phys)
+    factorCalc()
+    df <- f$data
+    A <- df$factorA
+    B <- df$factorB
+    C <- df$factorC
+    H <- df$health
+    
+    if (numSelectedFactors == 2){
+      model <- lm(H ~ A*B, data = df, 
+                  contrasts = list(A = contr.FrF2, B = contr.FrF2))
+    } else if (numSelectedFactors == 3){
+      model <- lm(H ~ A*B*C, data = df, 
+                  contrasts = list(A = contr.FrF2, B = contr.FrF2, C = contr.FrF2))
+    }
+    
+
+    return(model)
   })
   
   # Function to generate summary without creating plots
@@ -1053,10 +1077,6 @@ server <- function(input, output) {
   })
   
   output$effects_plot <- renderPlot({
-    
-    #TODO: Debug the Model and Make sure it's in the same format as
-    #design.R :)
-    
       model <- getModel()
       
       # Extract coefficients (half effects)
@@ -1088,6 +1108,49 @@ server <- function(input, output) {
         text(plot_data$x[labeled], plot_data$y[labeled], 
              labels = parnames[labeled], pos = 2)
       }
+  })
+  
+  # Output: Effects Analysis Text
+  output$effects_output <- renderUI({
+    model <- getModel()
+    
+    # Extract coefficients (half effects)
+    coeffs <- coef(model)[-1]  # Remove intercept
+    
+    # Calculate full effects (2 × coefficients)
+    effects <- 2 * coeffs
+    
+    # Create a data frame of effects
+    effects_df <- data.frame(
+      Effect = names(effects),
+      Estimate = effects,
+      `Half_Effect` = coeffs,
+      `Std_Error` = summary(model)$coefficients[-1, "Std. Error"],
+      `t_value` = summary(model)$coefficients[-1, "t value"],
+      `Pr(>|t|)` = summary(model)$coefficients[-1, "Pr(>|t|)"]
+    )
+    sig_effects <- effects_df[effects_df$`Pr(>|t|)` < 0.05, ]
+    
+    HTML(
+      kable(effects_df, row.names = TRUE) %>%
+        kable_styling(
+          bootstrap_options = c("striped", "responsive"),
+          full_width = FALSE,
+          position = "left"
+        ) %>%
+        # Highlight significant p-values
+        row_spec(
+          which(nrow(sig_effects) > 0),
+          bold = TRUE,
+          background = "#e67763"
+        ) %>%
+        # Add footer with significance key
+        add_footnote(
+          c("Significant Effects are highlighted if p < 0.05"),
+          notation = "none"
+        )
+    )
+    
   })
   
   output$assumptions <-renderPlot({
