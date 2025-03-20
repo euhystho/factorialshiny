@@ -61,7 +61,7 @@ cards <- list(
   card(
     card_header("Assumptions"),
     min_height = 625,
-    plotlyOutput("Assumptions")
+    plotlyOutput("assumptions")
   ),
   card(
     card_header("Effects"),
@@ -397,7 +397,13 @@ ui <- page_sidebar(
     id = "tabs",
     tabPanel(title = "Introduction", value = "intro", cards[[7]]),
     tabPanel(title = "Design Cube(s)",value = "cube", cards[[4]]),
-    tabPanel(title = "Assumptions", value = "assumption", cards[[5]]),
+    tabPanel(title = "Assumptions", value = "assumption",
+             page_navbar(
+             nav_panel(title = "Independence", verbatimTextOutput("independence")),
+             nav_panel(title = "Residual vs Fitted", plotOutput('residual')),
+             nav_panel(title = "Normal QQ Plot", plotOutput('QQ')),
+             nav_panel(title = "Outliers", verbatimTextOutput('outlier'))),
+             ),
     tabPanel(title = "Interaction Plot", value = "interaction", cards[[1]]),
     tabPanel(title = "Effects", value = "effect", cards[[6]]),
     conditionalPanel(
@@ -1085,10 +1091,46 @@ server <- function(input, output) {
   })
   
   output$assumptions <-renderPlot({
-    
-    
   })
-  
+    output$independence <- renderPrint({
+      cat("This design has Independence")
+    })
+    output$residual <- renderPlot({
+      model <- getModel()
+      plot(fitted(model), residuals(model), 
+           xlab = "Fitted Values", ylab = "Residuals",
+           main = "Residuals vs Fitted", pch = 19, col = "blue")
+      abline(h = 0, lty = 2, col = "red")
+    })
+    output$QQ <- renderPlot({
+      model <- getModel()
+      qqnorm(residuals(model), main = "Normal Q-Q Plot", pch = 19, col = "blue")
+      qqline(residuals(model), col = "red", lwd = 2)
+    })
+      output$outlier <- renderPrint({
+        model <- getModel()
+        df <- getData()
+        tryCatch({
+          if (input$dataset == "Voltmeter Experiment") {
+            cat("Gaptest Analysis for Outlier Detection:\n")
+            gap_result <- Gaptest(df)
+            
+            if (is.null(gap_result)){
+              cat("There are no outliers in this dataset!")
+            } else {
+              print(gap_result)
+            }
+          } else {
+            cat("Outlier check only available for built-in datasets with appropriate structure.\n")
+          }
+        }, error = function(e) {
+          cat("Error in outlier detection: ", e$message, "\n")
+          cat("Cook's Distances for potential outliers:\n")
+          cooks_d <- cooks.distance(model)
+          print(sort(cooks_d[cooks_d > 4/length(cooks_d)], decreasing = TRUE))
+        })
+      })
+    
   output$anova <- renderUI({
     if (length(input$phys) < 2){
       return()
