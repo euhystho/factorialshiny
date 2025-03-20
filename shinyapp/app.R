@@ -21,6 +21,7 @@ library(dae)
 #Factorial Design related libraries
 library(AlgDesign)
 library(DoE.base)
+library(daewr)
 
 
 cards <- list(
@@ -44,16 +45,6 @@ cards <- list(
     ),
   ),
   card(
-    card_header("ANOVA Table"), 
-    min_height = 10, 
-    uiOutput("anova")
-  ),
-  card(
-    card_header("Factorial Design Table"),
-    min_height = 10,
-    uiOutput("design")
-  ),
-  card(
     card_header("Factorial Design Plot through Plotly"),
     min_height = 625,
     plotlyOutput("factorial")
@@ -67,32 +58,6 @@ cards <- list(
     card_header("Effects"),
     min_height = 625,
     plotOutput("effects_plot")
-  ),
-  card(
-    h5("Healthy Habits Circle Simulated Experiment Design", style = "font-weight: bold;"),
-    p("2³ factorial design with the following factors:"),
-    
-    tags$div(
-      style = "margin-left: 15px;",
-      HTML("<b>Nutrition:</b>"),
-      tags$ul(
-        tags$li(HTML("Purposeful: Tracking calories or practicing healthy eating habits")),
-        tags$li("Mindless: Not planning or practicing healthy eating habits")
-      ),
-      HTML("<b>Sleep:</b>"),
-      tags$ul(
-        tags$li("Sufficient:  7 hours of sleep"),
-        tags$li("Insufficient: < 7 hours of sleep")
-      ), 
-      
-      HTML("<b>Exercise:</b> <i>Exercise Intensity</i>"),
-      tags$ul(
-        tags$li("Intense: Engaging in more-strenuous activities"),
-        tags$li("Light: Engaging in non-strenuous actvities or no exercise")
-      )
-    ),
-    
-    p(HTML("<b>Response:</b> <i>Health Score</i>"))
   )
 )
 
@@ -395,23 +360,23 @@ ui <- page_sidebar(
   tabsetPanel(
     id = "tabs",
     tabPanel(title = "Introduction", value = "intro", intro_card),
-    tabPanel(title = "Design Cube(s)",value = "cube", cards[[4]]),
+    tabPanel(title = "Design Cube(s)",value = "cube", plot_card[[2]]),
     tabPanel(title = "Assumptions", value = "assumption",
-             page_navbar(
-             nav_panel(title = "Independence", verbatimTextOutput("independence")),
-             nav_panel(title = "Residual vs Fitted", plotOutput('residual')),
-             nav_panel(title = "Normal QQ Plot", plotOutput('QQ')),
-             nav_panel(title = "Outliers", verbatimTextOutput('outlier'))),
-             ),
-    tabPanel(title = "Interaction Plot", value = "interaction", cards[[1]]),
-    tabPanel(title = "Effects", value = "effect", cards[[6]]),
+      page_navbar(
+        nav_panel(title = "Independence", text_card[[1]]),
+        nav_panel(title = "Residual vs Fitted", plot_card[[5]]),
+        nav_panel(title = "Normal QQ Plot", plot_card[[6]]),
+        nav_panel(title = "Outliers", text_card[[2]]))
+      ),
+    tabPanel(title = "Interaction Plot", value = "interaction", plot_card[[1]]),
+    tabPanel(title = "Effects", value = "effect", plot_card[[4]]),
     conditionalPanel(
       condition = "input.tabs != 'intro' & input.tabs != 'effect'",
-      layout_columns(cards[[3]], cards[[2]], col_widths = c(4,8))
+      layout_columns(table_card[[2]], table_card[[1]], col_widths = c(4,8))
     ),
     conditionalPanel(
       condition = "input.tabs == 'effect'",
-      uiOutput("effects_output")
+      table_card[[3]]
     )
     
   )
@@ -502,8 +467,8 @@ server <- function(input, output) {
       NULL
     
     # Set default factor labels
-    firstFactorLabels <- c("Low", "High")
-    secondFactorLabels <- c("Low", "High")
+    firstFactorLabels <- c("Low", "High") # nolint
+    secondFactorLabels <- c("Low", "High") # nolint
     thirdFactorLabels <- c("Low", "High")
     
     # Handle different numbers of factors
@@ -611,8 +576,6 @@ server <- function(input, output) {
       H <- data$health
       
       # Run ANOVA with all three factors and their interactions
-      f$design <- design
-      f$data <- data
       f$result <- aov(H ~ A * B * C)
       
     } else if (numSelectedFactors == 2) {
@@ -659,11 +622,11 @@ server <- function(input, output) {
       H <- data$health
       
       # Run ANOVA with two factors
-      f$design <- design
-      f$data <- data
       f$result <- aov(H ~ A * B)
-      
     }
+    # Store the data in the reactiveValues
+    f$design <- design
+    f$data <- data
   })
   
   getModel <- reactive({
@@ -1110,7 +1073,46 @@ server <- function(input, output) {
       }
   })
   
-  # Output: Effects Analysis Text
+
+  output$assumptions <-renderPlot({
+    
+  })
+  
+  output$independence <- renderPrint({
+    cat("This design has Independence")
+  })
+  output$residual <- renderPlot({
+    model <- getModel()
+    plot(fitted(model), residuals(model), 
+         xlab = "Fitted Values", ylab = "Residuals",
+         main = "Residuals vs Fitted", pch = 19, col = "blue")
+    abline(h = 0, lty = 2, col = "red")
+  })
+  output$QQ <- renderPlot({
+    model <- getModel()
+    qqnorm(residuals(model), main = "Normal Q-Q Plot", pch = 19, col = "blue")
+    qqline(residuals(model), col = "red", lwd = 2)
+  })
+  output$outlier <- renderPrint({
+    model <- getModel()
+    df <- f$data
+    tryCatch({
+      cat("Gaptest Analysis for Outlier Detection:\n")
+      gap_result <- Gaptest(df)
+      
+      if (is.null(gap_result)){
+        cat("There are no outliers in this dataset!")
+      } else {
+        print(gap_result)
+      }
+    }, error = function(e) {
+      cat("Error in outlier detection: ", e$message, "\n")
+      cat("Cook's Distances for potential outliers:\n")
+      cooks_d <- cooks.distance(model)
+      print(sort(cooks_d[cooks_d > 4/length(cooks_d)], decreasing = TRUE))
+    })
+  })
+
   output$effects_output <- renderUI({
     model <- getModel()
     
@@ -1122,7 +1124,6 @@ server <- function(input, output) {
     
     # Create a data frame of effects
     effects_df <- data.frame(
-      Effect = names(effects),
       Estimate = effects,
       `Half_Effect` = coeffs,
       `Std_Error` = summary(model)$coefficients[-1, "Std. Error"],
@@ -1130,6 +1131,9 @@ server <- function(input, output) {
       `Pr(>|t|)` = summary(model)$coefficients[-1, "Pr(>|t|)"]
     )
     sig_effects <- effects_df[effects_df$`Pr(>|t|)` < 0.05, ]
+    
+    effects_df <- insertFactorsToTable(effects_df,input$phys)
+    
     
     HTML(
       kable(effects_df, row.names = TRUE) %>%
@@ -1153,47 +1157,6 @@ server <- function(input, output) {
     
   })
   
-  output$assumptions <-renderPlot({
-  })
-    output$independence <- renderPrint({
-      cat("This design has Independence")
-    })
-    output$residual <- renderPlot({
-      model <- getModel()
-      plot(fitted(model), residuals(model), 
-           xlab = "Fitted Values", ylab = "Residuals",
-           main = "Residuals vs Fitted", pch = 19, col = "blue")
-      abline(h = 0, lty = 2, col = "red")
-    })
-    output$QQ <- renderPlot({
-      model <- getModel()
-      qqnorm(residuals(model), main = "Normal Q-Q Plot", pch = 19, col = "blue")
-      qqline(residuals(model), col = "red", lwd = 2)
-    })
-      output$outlier <- renderPrint({
-        model <- getModel()
-        df <- getData()
-        tryCatch({
-          if (input$dataset == "Voltmeter Experiment") {
-            cat("Gaptest Analysis for Outlier Detection:\n")
-            gap_result <- Gaptest(df)
-            
-            if (is.null(gap_result)){
-              cat("There are no outliers in this dataset!")
-            } else {
-              print(gap_result)
-            }
-          } else {
-            cat("Outlier check only available for built-in datasets with appropriate structure.\n")
-          }
-        }, error = function(e) {
-          cat("Error in outlier detection: ", e$message, "\n")
-          cat("Cook's Distances for potential outliers:\n")
-          cooks_d <- cooks.distance(model)
-          print(sort(cooks_d[cooks_d > 4/length(cooks_d)], decreasing = TRUE))
-        })
-      })
-    
   output$anova <- renderUI({
     if (length(input$phys) < 2){
       return()
@@ -1231,28 +1194,8 @@ server <- function(input, output) {
       anova_df$Significance <- NULL
     }
     
+    anova_df <- insertFactorsToTable(anova_df,input$phys)
     
-    # Get all factor names
-    selected_factors <- input$phys
-    if (length(selected_factors) == 2) {
-      row.names(anova_df)[1:3] = c(selected_factors[1], selected_factors[2], "Interaction")
-    } else if (length(selected_factors) == 3) {
-      row.names(anova_df)[1:7] = c(
-        selected_factors[1],
-        selected_factors[2],
-        selected_factors[3],
-        paste0(selected_factors[1], ":", selected_factors[2]),
-        paste0(selected_factors[1], ":", selected_factors[3]),
-        paste0(selected_factors[2], ":", selected_factors[3]),
-        paste0(
-          selected_factors[1],
-          ":",
-          selected_factors[2],
-          ":",
-          selected_factors[3]
-        )
-      )
-    }
     # Create nicely formatted table
     HTML(
       kable(anova_df, row.names = TRUE) %>%
@@ -1265,7 +1208,8 @@ server <- function(input, output) {
         row_spec(
           which(anova_results[, "Pr(>F)"] < 0.05),
           bold = TRUE,
-          background = "#e67763"
+          background = "#e67763",
+          color = "#FFF"
         ) %>%
         # Add footer with significance key
         add_footnote(
@@ -1329,7 +1273,6 @@ server <- function(input, output) {
     # Return the HTML
     HTML(table_with_styling)
   })
-  
   
 }
 
