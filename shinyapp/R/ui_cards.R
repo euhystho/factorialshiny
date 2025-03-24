@@ -1,6 +1,7 @@
 library(bslib)
 library(bsicons)
 library(plotly)
+
 # Global Variables, adjust if needed:
 min_plot_height <- 625
 min_table_height <- 10

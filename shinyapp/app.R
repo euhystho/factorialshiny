@@ -9,7 +9,6 @@ library(shinyjs)
 library(shinyWidgets)
 library(bslib)
 library(bsicons)
-library(thematic)
 library(paletteer)
 
 #Plot related libraries
@@ -22,44 +21,7 @@ library(dae)
 library(AlgDesign)
 library(DoE.base)
 library(daewr)
-
-
-cards <- list(
-  card(
-    card_header("Interaction Plot"),
-    min_height = 625,
-    card_body(
-      layout_columns(
-        value_box(
-          title = "Standard Deviation",
-          value = textOutput("sd"),
-          showcase = bs_icon("badge-sd-fill"),
-        ),
-        value_box(
-          title = "Change in Health",
-          value = textOutput("health_change"),
-          showcase = bs_icon("heart-pulse-fill"),
-        ),
-      ),
-      plotOutput("interaction_plot")
-    ),
-  ),
-  card(
-    card_header("Factorial Design Plot through Plotly"),
-    min_height = 625,
-    plotlyOutput("factorial")
-  ),
-  card(
-    card_header("Assumptions"),
-    min_height = 625,
-    plotlyOutput("assumptions")
-  ),
-  card(
-    card_header("Effects"),
-    min_height = 625,
-    plotOutput("effects_plot")
-  )
-)
+options(shiny.reactlog=TRUE) 
 
 
 # Define UI for application
@@ -73,6 +35,7 @@ ui <- page_sidebar(
   
   # Mobile Friendly:
   fillable_mobile = TRUE,
+  mobileDetect('isMobile'),
   
   # Sidebar with a slider input for number of bins
   sidebar = sidebar(
@@ -190,56 +153,56 @@ ui <- page_sidebar(
               "Choose the intensity of Swimming:",
               grid = TRUE,
               force_edges = TRUE,
-              choices = c("None","Moderate", "Intense")
+              choices = c("None","Light", "Intense")
             ),
             sliderTextInput(
               "run_slider",
               "Choose the intensity of Running:",
               grid = TRUE,
               force_edges = TRUE,
-              choices = c("None","Moderate", "Intense")
+              choices = c("None","Light", "Intense")
             ),
             sliderTextInput(
               "walk_slider",
               "Choose the intensity of Walking:",
               grid = TRUE,
               force_edges = TRUE,
-              choices = c("None","Moderate", "Intense")
+              choices = c("None","Light", "Intense")
             ),
             sliderTextInput(
               "hike_slider",
               "Choose the intensity of Hiking:",
               grid = TRUE,
               force_edges = TRUE,
-              choices = c("None","Moderate", "Intense")
+              choices = c("None","Light", "Intense")
             ),
             sliderTextInput(
               "bike_slider",
               "Choose the intensity of Biking:",
               grid = TRUE,
               force_edges = TRUE,
-              choices = c("None","Moderate", "Intense")
+              choices = c("None","Light", "Intense")
             ),
             sliderTextInput(
               "team_slider",
               "Choose the intensity of Team Sport:",
               grid = TRUE,
               force_edges = TRUE,
-              choices = c("None","Moderate", "Intense")
+              choices = c("None","Light", "Intense")
             ),
             sliderTextInput(
               "lifting_slider",
               "Choose the intensity of Weightlifting:",
               grid = TRUE,
               force_edges = TRUE,
-              choices = c("None","Moderate", "Intense")
+              choices = c("None","Light", "Intense")
             ),
             sliderTextInput(
               "other_exerc_slider",
               "Choose the intensity of Other Exercise:",
               grid = TRUE,
               force_edges = TRUE,
-              choices = c("None","Moderate", "Intense")
+              choices = c("None","Light", "Intense")
             ),
           )
         ),
@@ -359,35 +322,35 @@ ui <- page_sidebar(
   ),
   tabsetPanel(
     id = "tabs",
-    tabPanel(title = "Introduction", value = "intro", intro_card),
-    tabPanel(title = "Design Cube(s)",value = "cube", plot_card[[2]]),
-    tabPanel(title = "Assumptions", value = "assumption",
-      page_navbar(
-        nav_panel(title = "Independence", text_card[[1]]),
-        nav_panel(title = "Residual vs Fitted", plot_card[[5]]),
-        nav_panel(title = "Normal QQ Plot", plot_card[[6]]),
-        nav_panel(title = "Outliers", text_card[[2]]))
-      ),
-    tabPanel(title = "Interaction Plot", value = "interaction", plot_card[[1]]),
-    tabPanel(title = "Effects", value = "effect", plot_card[[4]]),
-    conditionalPanel(
-      condition = "input.tabs != 'intro' & input.tabs != 'effect'",
-      layout_columns(table_card[[2]], table_card[[1]], col_widths = c(4,8))
+    nav_panel(title = "Introduction", value = "intro", intro_card),
+    nav_panel(title = "Design Cube(s)", value = "cube", plot_card[[2]]),
+    nav_panel(title = "Assumptions", value = "assumption",
+              navset_card_underline(
+                nav_panel(title = "Independence", text_card[[1]]),
+                nav_panel(title = "Residual vs Fitted", plot_card[[5]]),
+                nav_panel(title = "Normal QQ Plot", plot_card[[6]]),
+                nav_panel(title = "Outliers", text_card[[2]])
+              )
     ),
-    conditionalPanel(
-      condition = "input.tabs == 'effect'",
-      table_card[[3]]
+    nav_panel(title = "Interaction Plot", value = "interaction", plot_card[[1]]),
+    nav_panel(title = "Effects", value = "effect", plot_card[[4]]),
+    footer = tagList(
+      conditionalPanel(
+        condition = "input.tabs != 'intro' && input.tabs != 'effect'",
+        layout_columns(table_card[[2]], table_card[[1]], col_widths = c(4, 8))
+      ),
+      conditionalPanel(
+        condition = "input.tabs == 'effect'",
+        table_card[[3]]
+      )
     )
-    
-  )
+  ),
+  
   
 )
 
 # Define server logic
 server <- function(input, output) {
-  #Change some thematics before using this:
-  
-  # thematic_shiny()
   
   f <- reactiveValues(
     data = NULL,
@@ -396,57 +359,6 @@ server <- function(input, output) {
     std_dev = NULL,
     health_value = NULL
   )
-  
-  labelFactors <- function(user_input, num_factors) {
-    #NOTE: Change the Low/High based on the Factors:
-    sleepLabels <- list("Insufficient", "Sufficient")
-    exerciseLabels <- list("Moderate", "Intense")
-    nutritionLabels <- list("Mindless", "Purposeful")
-    
-    factorALabels <- NULL
-    factorBLabels <- NULL
-    factorCLabels <- NULL
-    
-    sleepIndex <- match("Sleep", user_input)
-    exerciseIndex <- match("Exercise", user_input)
-    nutritionIndex <- match("Nutrition", user_input)
-    
-    if (!is.na(sleepIndex) && num_factors >= 2) {
-      if (sleepIndex == 1) {
-        factorALabels = sleepLabels
-      } else if (sleepIndex == 2) {
-        factorBLabels = sleepLabels
-      } else if (sleepIndex == 3 && num_factors == 3) {
-        factorCLabels = sleepLabels
-      }
-    }
-    
-    if (!is.na(exerciseIndex && num_factors >= 2)) {
-      if (exerciseIndex == 1) {
-        factorALabels = exerciseLabels
-      } else if (exerciseIndex == 2) {
-        factorBLabels = exerciseLabels
-      } else if (exerciseIndex == 3 && num_factors == 3) {
-        factorCLabels = exerciseLabels
-      }
-    }
-    
-    if (!is.na(nutritionIndex && num_factors >= 2)) {
-      if (nutritionIndex == 1) {
-        factorALabels = nutritionLabels
-      } else if (nutritionIndex == 2) {
-        factorBLabels = nutritionLabels
-      } else if (nutritionIndex == 3 && num_factors == 3) {
-        factorCLabels = nutritionLabels
-      }
-    }
-    
-    if (num_factors == 3) {
-      return(list(factorALabels, factorBLabels, factorCLabels))
-    } else if (num_factors == 2) {
-      return(list(factorALabels, factorBLabels))
-    }
-  }
   
   factorCalc <- reactive({
     # Create a vector of the number of levels for each factor
@@ -467,8 +379,8 @@ server <- function(input, output) {
       NULL
     
     # Set default factor labels
-    firstFactorLabels <- c("Low", "High") # nolint
-    secondFactorLabels <- c("Low", "High") # nolint
+    firstFactorLabels <- c("Low", "High") 
+    secondFactorLabels <- c("Low", "High") 
     thirdFactorLabels <- c("Low", "High")
     
     # Handle different numbers of factors
@@ -476,7 +388,7 @@ server <- function(input, output) {
       # For 3 factors
       levels <- c(2, 2, 2)
       factorNames <- c(first_factor, second_factor, third_factor)
-      factorLabels <- labelFactors(factorNames, numSelectedFactors)
+      factorLabels <- labelFactors(input$phys, factor_labels)
       
       firstFactorLow <- factorLabels[[1]][[1]]
       firstFactorHigh <- factorLabels[[1]][[2]]
@@ -582,7 +494,7 @@ server <- function(input, output) {
       # For 2 factors
       levels <- c(2, 2)
       factorNames <- c(first_factor, second_factor)
-      factorLabels <- labelFactors(factorNames, numSelectedFactors)
+      factorLabels <- labelFactors(input$phys, factor_labels)
       
       firstFactorLow <- factorLabels[[1]][[1]]
       firstFactorHigh <- factorLabels[[1]][[2]]
@@ -646,7 +558,7 @@ server <- function(input, output) {
                   contrasts = list(A = contr.FrF2, B = contr.FrF2, C = contr.FrF2))
     }
     
-
+    
     return(model)
   })
   
@@ -659,13 +571,15 @@ server <- function(input, output) {
     }
     
     factorCalc()
+    
     data <- f$data
+    
+    A <- data$factorA
+    B <- data$factorB
+    H <- data$health
     
     # Extract the factors based on how many are selected
     if (length(input$phys) == 2) {
-      A <- data$factorA
-      B <- data$factorB
-      H <- data$health
       
       # Get the actual selected dimensions in their original order
       selected_dimensions <- input$phys
@@ -679,12 +593,12 @@ server <- function(input, output) {
         ),
         # Nutrition and Exercise combination
         "Nutrition_Exercise" = list(
-          low_low = c("Mindless", "Moderate"),
+          low_low = c("Mindless", "Light"),
           high_high = c("Purposeful", "Intense")
         ),
         # Sleep and Exercise combination
         "Sleep_Exercise" = list(
-          low_low = c("Insufficient", "Moderate"),
+          low_low = c("Insufficient", "Light"),
           high_high = c("Sufficient", "Intense")
         )
       )
@@ -737,21 +651,10 @@ server <- function(input, output) {
         f$std_dev <- round(diff_health_sd, 2)
         f$health_value <- round(pct_improve, 1)
         
-      } else {
-        showNotification(
-          paste(
-            "Invalid combination: ",
-            combination,
-            ". Please use a combination from: 'Nutrition', 'Sleep', and 'Exercise'."
-          )
-        )
-      }
+      } 
     } else if (length(input$phys) == 3) {
       # If all three factors are selected, we can do a more comprehensive analysis
-      A <- data$factorA
-      B <- data$factorB
       C <- data$factorC
-      H <- data$health
       
       # Calculate means for all combinations
       means <- tapply(H, list(A, B, C), mean)
@@ -780,205 +683,99 @@ server <- function(input, output) {
   
   # Update the output renderers to handle the case when fewer than 2 dimensions are selected
   output$sd <- renderText({
-    if (length(input$phys) < 2 || is.null(generate_summary())) {
+    isTwoFactor = length(input$phys) == 2
+    if (!isTwoFactor || is.null(generate_summary())) {
       return("N/A")
     }
     return(f$std_dev)
   })
   
   output$health_change <- renderText({
-    if (length(input$phys) < 2 || is.null(generate_summary())) {
+    isTwoFactor = length(input$phys) == 2
+    if (!isTwoFactor || is.null(generate_summary())) {
       return("N/A")
     }
     return(paste0(f$health_value, "%"))
   })
   
   output$interaction_plot <- renderPlot({
-    if (length(input$phys) < 2) {
-      plot(0,
-           0,
-           type = "n",
-           axes = FALSE,
-           ann = FALSE)
-      text(0,
-           0,
-           "Please select 2 subfactors under the Physical Health panel!",
-           cex = 1.5)
+    numFactors <- length(input$phys)
+    if (numFactors < 2 || numFactors == 3) {
+      plot(0, 0, type = "n", axes = FALSE, ann = FALSE)
+      text(0, 0, "Please select 2 subfactors under the Physical Health panel!", cex = 1.5)
       return()
     }
     
     factorCalc()
     df <- f$data
-    A <- df$factorA
-    B <- df$factorB
-    H <- df$health
     
     # Use the selected dimensions for plot labels
-    sleepLabel <- "Sleep Hours"
-    exerciseLabel <- "Exercise Intensity"
-    nutritionLabel <- "Nutrition Intention"
+    labels <- labelFactors(input$phys, factors_plot_labels)
     
-    numFactors <- length(input$phys)
-    
-    sleepIndex <- match("Sleep", input$phys)
-    exerciseIndex <- match("Exercise", input$phys)
-    nutritionIndex <- match("Nutrition", input$phys)
-    
-    if (!is.na(sleepIndex)) {
-      if (sleepIndex == 1) {
-        factorALabel = sleepLabel
-      } else if (sleepIndex == 2) {
-        factorBLabel = sleepLabel
-      } else if (sleepIndex == 3){
-        factorCLabel = sleepLabel
-      }
-    }
-    
-    if (!is.na(exerciseIndex)) {
-      if (exerciseIndex == 1) {
-        factorALabel = exerciseLabel
-      } else if (exerciseIndex == 2) {
-        factorBLabel = exerciseLabel
-      } else if (exerciseIndex == 3){
-        factorCLabel = exerciseLabel
-      }
-    }
-    
-    if (!is.na(nutritionIndex)) {
-      if (nutritionIndex == 1) {
-        factorALabel = nutritionLabel
-      } else if (nutritionIndex == 2) {
-        factorBLabel = nutritionLabel
-      }else if (nutritionIndex == 3){
-        factorCLabel = nutritionLabel
-      }
-    }
-    
-    
-    if (numFactors == 3){
-      plot(0,
-           0,
-           type = "n",
-           axes = FALSE,
-           ann = FALSE)
-      text(0,
-           0,
-           "Please select 2 subfactors under the Physical Health panel!",
-           cex = 1.5)
-      return()
-    } else {
-      interaction.plot(A,
-                       B,
-                       H,
-                       xlab = factorALabel ,
-                       ylab = "Overall Health Score",
-                       trace.label = factorBLabel)
-    }
-    
-    
+    interaction.plot(
+      df$factorA, 
+      df$factorB, 
+      df$health,
+      xlab = labels[1],
+      ylab = "Overall Health Score",
+      trace.label = labels[2]
+    )
   })
   
   output$factorial <- renderPlotly({
-    # Define the Factors and Levels
-    factors = 3
-    levels = c(0, 1)
+    # Create factorial design grid
+    df <- expand.grid(
+      sleep = c(0, 1),
+      exercise = c(0, 1),
+      nutrition = c(0, 1)
+    )
     
-    # Create factorial design grid reducing time complexity from O(N^3) to O(1)
-    df <- expand.grid(sleep = levels,
-                      exercise = levels,
-                      nutrition = levels)
+    # Add hover text
+    df$sleep_text <- ifelse(df$sleep == 0, "Low", "High")
+    df$exercise_text <- ifelse(df$exercise == 0, "Low", "High")
+    df$nutrition_text <- ifelse(df$nutrition == 0, "Low", "High")
     
-    # Add hovertext directly to the dataframe and factors
-    df$sleep_hovertext <- ifelse(df$sleep == 0, "Low", "High")
-    df$exercise_hovertext <- ifelse(df$exercise == 0, "Low", "High")
-    df$nutrition_hovertext <- ifelse(df$nutrition == 0, "Low", "High")
+    # Edge definitions and colors
+    edges <- list(
+      c(1, 2), c(2, 4), c(4, 3), c(3, 1),  # Bottom square
+      c(5, 6), c(6, 8), c(8, 7), c(7, 5),  # Top square
+      c(1, 5), c(2, 6), c(3, 7), c(4, 8)   # Vertical edges
+    )
+    
+    #Set up the color palette 
+    edge_colors <- paletteer_d("DresdenColor::paired")
+    
+    # Function to determine changing factor and generate edge label
+    get_edge_info <- function(df, edge) {
+      v1 <- df[edge[1], ]
+      v2 <- df[edge[2], ]
+      
+      # Find which factor changes
+      factor <- if (v1$sleep != v2$sleep) {
+        c("sleep", v1$sleep_text, v2$sleep_text)
+      } else if (v1$exercise != v2$exercise) {
+        c("exercise", v1$exercise_text, v2$exercise_text)
+      } else {
+        c("nutrition", v1$nutrition_text, v2$nutrition_text)
+      }
+      
+      # Create label
+      label <- paste0(
+        toupper(substr(factor[1], 1, 1)),
+        substr(factor[1], 2, nchar(factor[1])),
+        ": ", factor[2], " → ", factor[3]
+      )
+      
+      return(label)
+    }
     
     # Initialize plot
     plot <- plot_ly()
     
-    # Define the edges of the cube as pairs of vertex indices
-    edges <- list(
-      # Bottom square
-      c(1, 2),
-      c(2, 4),
-      c(4, 3),
-      c(3, 1),
-      # Top square
-      c(5, 6),
-      c(6, 8),
-      c(8, 7),
-      c(7, 5),
-      # Vertical edges
-      c(1, 5),
-      c(2, 6),
-      c(3, 7),
-      c(4, 8)
-    )
-    
-    # Define colors for different factors
-    factor_colors <- list(
-      sleep = list(low = "#1f77b4", high = "#17becf"),
-      exercise = list(low = "#ff7f0e", high = "#d62728"),
-      nutrition = list(low = "#2ca02c", high = "#9467bd")
-    )
-    
-    # Get a color palette for edges
-    edge_colors <- paletteer_d("DresdenColor::paired")
-    
-    # Function to determine which factor changes along an edge
-    determine_changing_factor <- function(df, edge_indices) {
-      v1 <- df[edge_indices[1], ]
-      v2 <- df[edge_indices[2], ]
-      
-      if (v1$sleep != v2$sleep)
-        return("sleep")
-      if (v1$exercise != v2$exercise)
-        return("exercise")
-      if (v1$nutrition != v2$nutrition)
-        return("nutrition")
-      return("none")  # No change (shouldn't happen in a proper cube)
-    }
-    
-    # Function to generate edge label based on which factor changes
-    generate_edge_label <- function(df, edge_indices, factor) {
-      v1 <- df[edge_indices[1], ]
-      v2 <- df[edge_indices[2], ]
-      
-      # Determine direction of change
-      if (factor == "sleep") {
-        from_val <- v1$sleep_hovertext
-        to_val <- v2$sleep_hovertext
-      } else if (factor == "exercise") {
-        from_val <- v1$exercise_hovertext
-        to_val <- v2$exercise_hovertext
-      } else if (factor == "nutrition") {
-        from_val <- v1$nutrition_hovertext
-        to_val <- v2$nutrition_hovertext
-      } else {
-        return("Edge")  # Fallback, shouldn't happen
-      }
-      
-      # Create label with factor name and direction
-      return(paste0(
-        toupper(substr(factor, 1, 1)),
-        substr(factor, 2, nchar(factor)),
-        ": ",
-        from_val,
-        " → ",
-        to_val
-      ))
-    }
-    
-    
-    # Draw all the edges on plotly with colors and labels
-    for (i in 1:length(edges)) {
+    # Add edges
+    for (i in seq_along(edges)) {
       edge <- edges[[i]]
-      
-      # Determine what factor changes along this edge
-      changing_factor <- determine_changing_factor(df, edge)
-      
-      # Generate edge label
-      edge_label <- generate_edge_label(df, edge, changing_factor)
+      edge_label <- get_edge_info(df, edge)
       
       plot <- plot %>% add_trace(
         x = df$sleep[edge],
@@ -989,11 +786,22 @@ server <- function(input, output) {
         name = edge_label,
         line = list(color = edge_colors[i], width = 6),
         hoverinfo = 'skip',
-        showlegend = TRUE    # Add to legend
+        showlegend = TRUE
       )
     }
     
-    # Add all the points on plotly (vertices)
+    # Add vertices
+    hover_template <- paste(
+      "Sleep: %{customdata[1]}<br>",
+      "Exercise: %{customdata[2]}<br>",
+      "Nutrition: %{customdata[3]}",
+      "<extra></extra>"
+    )
+    
+    custom_data <- lapply(1:nrow(df), function(i) {
+      list(df$sleep_text[i], df$exercise_text[i], df$nutrition_text[i])
+    })
+    
     plot <- plot %>% add_trace(
       x = df$sleep,
       y = df$exercise,
@@ -1001,86 +809,67 @@ server <- function(input, output) {
       type = 'scatter3d',
       mode = 'markers',
       name = "Factor Points",
-      marker = list(
-        size = 8,
-        color = "black",
-        symbol = "circle"
-      ),
-      hovertemplate = paste(
-        "Sleep:",
-        df$sleep_hovertext,
-        "<br>",
-        "Exercise:",
-        df$exercise_hovertext,
-        "<br>",
-        "Nutrition:",
-        df$nutrition_hovertext,
-        # Extra removes to the trace number
-        "<extra></extra>"
-      )
+      marker = list(size = 8, color = "black", symbol = "circle"),
+      customdata = custom_data,
+      hovertemplate = hover_template
     )
     
     # Layout configuration
-    plot <- plot %>% layout(
+    plot %>% layout(
       scene = list(
         xaxis = list(title = 'Sleep', showgrid = FALSE),
         yaxis = list(title = 'Exercise', showgrid = FALSE),
         zaxis = list(title = 'Nutrition', showgrid = FALSE)
       ),
-      title = "3-D Representation of the 2^k Factorial Design",
+      title = "3-D Representation of the 2ᵏ Factorial Design",
+      margin = list(l = 60, r = 0),
       legend = list(
         title = list(text = "Factors and Levels"),
         orientation = "h",
-        yanchor = "bottom",
-        y = -0.2
+        visible = ifelse(input$isMobile, FALSE, TRUE)
       )
     )
-    
-    plot
   })
   
   output$effects_plot <- renderPlot({
-      model <- getModel()
-      
-      # Extract coefficients (half effects)
-      coeffs <- coef(model)[-1]  # Remove intercept
-      
-      # Create half-normal plot of effects
-      par(mfrow = c(1, 2))
-      
-      # Normal plot
-      qqnorm(coeffs, main = "Normal Plot of Effects", 
-             xlab = "Normal Scores", ylab = "Estimated Effects", 
-             pch = 16, col = "blue")
-      abline(lm(sort(coeffs) ~ qnorm(ppoints(length(coeffs)))))
-      
-      # Half-normal plot
-      abs_coeffs <- abs(coeffs)
-      qqnorm(abs_coeffs, main = "Half-Normal Plot of Effects", 
-             xlab = "Half-Normal Scores", ylab = "Absolute Effects", 
-             pch = 16, col = "red", plot.it = FALSE)
-      plot_data <- qqnorm(abs_coeffs, plot.it = FALSE)
-      plot(plot_data$x, plot_data$y, main = "Half-Normal Plot of Effects", 
-           xlab = "Half-Normal Scores", ylab = "Absolute Effects", 
-           pch = 16, col = "red")
-      
-      # Add labels for significant effects
-      parnames <- names(coeffs)
-      labeled <- abs_coeffs > (2 * sd(abs_coeffs))
-      if (any(labeled)) {
-        text(plot_data$x[labeled], plot_data$y[labeled], 
-             labels = parnames[labeled], pos = 2)
-      }
-  })
-  
-
-  output$assumptions <-renderPlot({
+    model <- getModel()
     
+    # Extract coefficients (half effects)
+    coeffs <- coef(model)[-1]  # Remove intercept
+    
+    # Create half-normal plot of effects
+    par(mfrow = c(1, 2))
+    
+    # Normal plot
+    qqnorm(coeffs, main = "Normal Plot of Effects", 
+           xlab = "Normal Scores", ylab = "Estimated Effects", 
+           pch = 16, col = "blue")
+    abline(lm(sort(coeffs) ~ qnorm(ppoints(length(coeffs)))))
+    
+    # Half-normal plot
+    abs_coeffs <- abs(coeffs)
+    qqnorm(abs_coeffs, main = "Half-Normal Plot of Effects", 
+           xlab = "Half-Normal Scores", ylab = "Absolute Effects", 
+           pch = 16, col = "red", plot.it = FALSE)
+    plot_data <- qqnorm(abs_coeffs, plot.it = FALSE)
+    plot(plot_data$x, plot_data$y, main = "Half-Normal Plot of Effects", 
+         xlab = "Half-Normal Scores", ylab = "Absolute Effects", 
+         pch = 16, col = "red")
+    
+    # Add labels for significant effects
+    parnames <- names(coeffs)
+    labeled <- abs_coeffs > (2 * sd(abs_coeffs))
+    if (any(labeled)) {
+      factor_labels <- formatSigEffect(parnames[labeled], input$phys)
+      text(plot_data$x[labeled], plot_data$y[labeled], 
+           labels = factor_labels, pos = 2)
+    }
   })
   
   output$independence <- renderPrint({
     cat("This design has Independence")
   })
+  
   output$residual <- renderPlot({
     model <- getModel()
     plot(fitted(model), residuals(model), 
@@ -1088,11 +877,13 @@ server <- function(input, output) {
          main = "Residuals vs Fitted", pch = 19, col = "blue")
     abline(h = 0, lty = 2, col = "red")
   })
+  
   output$QQ <- renderPlot({
     model <- getModel()
     qqnorm(residuals(model), main = "Normal Q-Q Plot", pch = 19, col = "blue")
     qqline(residuals(model), col = "red", lwd = 2)
   })
+  
   output$outlier <- renderPrint({
     model <- getModel()
     df <- f$data
@@ -1112,7 +903,7 @@ server <- function(input, output) {
       print(sort(cooks_d[cooks_d > 4/length(cooks_d)], decreasing = TRUE))
     })
   })
-
+  
   output$effects_output <- renderUI({
     model <- getModel()
     
@@ -1132,7 +923,7 @@ server <- function(input, output) {
     )
     sig_effects <- effects_df[effects_df$`Pr(>|t|)` < 0.05, ]
     
-    effects_df <- insertFactorsToTable(effects_df,input$phys)
+    effects_df <- labelTableFactors(effects_df,input$phys)
     
     
     HTML(
@@ -1162,61 +953,7 @@ server <- function(input, output) {
       return()
     }
     factorCalc()
-    
-    # Get the ANOVA results
-    anova_results <- anova(f$result)
-    
-    # Convert to data frame for better handling
-    anova_df <- as.data.frame(anova_results)
-    
-    # Round numeric columns to 3 decimal places
-    numeric_cols <- sapply(anova_df, is.numeric)
-    anova_df[, numeric_cols] <- round(anova_df[, numeric_cols], 3)
-    
-    # Format p-values with significance stars
-    if ("Pr(>F)" %in% colnames(anova_df)) {
-      # Create a new column for p-value display
-      anova_df$Significance <- ""
-      
-      # Add significance stars
-      anova_df$Significance[anova_df$`Pr(>F)` < 0.001] <- "***"
-      anova_df$Significance[anova_df$`Pr(>F)` >= 0.001 &
-                              anova_df$`Pr(>F)` < 0.01] <- "**"
-      anova_df$Significance[anova_df$`Pr(>F)` >= 0.01 &
-                              anova_df$`Pr(>F)` < 0.05] <- "*"
-      anova_df$Significance[anova_df$`Pr(>F)` >= 0.05 &
-                              anova_df$`Pr(>F)` < 0.1] <- "."
-      
-      # Format p-values for better readability
-      anova_df$`Pr(>F)` <- sprintf("%.3f %s", anova_df$`Pr(>F)`, anova_df$Significance)
-      
-      # Remove the separate significance column
-      anova_df$Significance <- NULL
-    }
-    
-    anova_df <- insertFactorsToTable(anova_df,input$phys)
-    
-    # Create nicely formatted table
-    HTML(
-      kable(anova_df, row.names = TRUE) %>%
-        kable_styling(
-          bootstrap_options = c("striped", "responsive"),
-          full_width = FALSE,
-          position = "left"
-        ) %>%
-        # Highlight significant p-values
-        row_spec(
-          which(anova_results[, "Pr(>F)"] < 0.05),
-          bold = TRUE,
-          background = "#e67763",
-          color = "#FFF"
-        ) %>%
-        # Add footer with significance key
-        add_footnote(
-          c("Significance codes: *** p<0.001, ** p<0.01, * p<0.05, . p<0.1"),
-          notation = "none"
-        )
-    )
+    table <- displayTable(f,input$phys, "anova")
   })
   
   output$design <- renderUI({
@@ -1224,54 +961,7 @@ server <- function(input, output) {
       return()
     }
     factorCalc()
-    data <- as.data.frame(f$design)
-    
-    # Get the selected factors
-    selected_factors <- input$phys
-    
-    # Create the base table
-    base_table <- kable(data, row.names = TRUE) %>%
-      kable_styling(bootstrap_options = c("striped", "responsive"),
-                    full_width = FALSE)
-    
-    # Apply column specifications based on which factors are selected
-    table_with_styling <- base_table
-    
-    # Check if each factor exists and apply appropriate styling
-    for (i in seq_along(selected_factors)) {
-      factor_name <- selected_factors[i]
-      col_index <- i + 1  # +1 because column 1 is row names
-      
-      # Only apply spec_color if the column exists and contains numeric or factor data
-      if (factor_name %in% colnames(data)) {
-        # Check if column is numeric or can be converted to numeric
-        col_data <- data[[factor_name]]
-        
-        # For factors, convert to numeric 1/2 for Low/High
-        if (is.factor(col_data) || is.character(col_data)) {
-          # Create a safe numeric representation for coloring
-          numeric_values <- as.numeric(as.factor(col_data))
-          
-          table_with_styling <- table_with_styling %>%
-            column_spec(
-              col_index,
-              color = 'white',
-              background = spec_color(numeric_values, end = 0.7, option = 'A')
-            )
-        } else if (is.numeric(col_data)) {
-          # If it's already numeric, use it directly
-          table_with_styling <- table_with_styling %>%
-            column_spec(
-              col_index,
-              color = 'white',
-              background = spec_color(col_data, end = 0.7, option = 'A')
-            )
-        }
-      }
-    }
-    
-    # Return the HTML
-    HTML(table_with_styling)
+    table <- displayTable(f, input$phys, "design")
   })
   
 }
