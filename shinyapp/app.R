@@ -921,7 +921,7 @@ server <- function(input, output) {
       `t_value` = summary(model)$coefficients[-1, "t value"],
       `Pr(>|t|)` = summary(model)$coefficients[-1, "Pr(>|t|)"]
     )
-    sig_effects <- effects_df[effects_df$`Pr(>|t|)` < 0.05, ]
+    sig_effects <- which(effects_df[[5]] < 0.05)
     
     effects_df <- labelTableFactors(effects_df,input$phys)
     
@@ -935,9 +935,10 @@ server <- function(input, output) {
         ) %>%
         # Highlight significant p-values
         row_spec(
-          which(nrow(sig_effects) > 0),
+          sig_effects,
           bold = TRUE,
-          background = "#e67763"
+          background = "#e67763",
+          color = "#FFF"
         ) %>%
         # Add footer with significance key
         add_footnote(
