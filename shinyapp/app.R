@@ -212,8 +212,15 @@ ui <- page_sidebar(
         icon = bs_icon("people-fill"),
         card (
           sliderInput(
-            "socialhours_slider",
-            "Specify amount of hours socializing with non-friends per week:",
+            "friends_slider",
+            "Specify the amount of hours socializing with friends per week:",
+            min = 0,
+            max = 25,
+            value = 10
+          ),
+          sliderInput(
+            "strangers_slider",
+            "Specify amount of hours socializing with strangers per week:",
             min = 0,
             max = 20,
             value = 10
@@ -223,13 +230,6 @@ ui <- page_sidebar(
             "Specify the amount of time a week spent doing community service:",
             min = 0,
             max = 30,
-            value = 10
-          ),
-          sliderInput(
-            "friends_slider",
-            "Specify the amount of hours socializing with friends per week:",
-            min = 0,
-            max = 25,
             value = 10
           )
         )
@@ -247,13 +247,20 @@ ui <- page_sidebar(
           ),
           sliderInput(
             "journal_slider",
-            "Choose how many hours spent journalling:",
+            "Choose how many hours spent journaling:",
             min = 0,
             max = 5,
             value = 3
           ),
           sliderInput(
             "mental_slider",
+            "Choose how many hours promoting mental health through an activity (e.g., therapy, support group):",
+            min = 0,
+            max = 20,
+            value = 2
+          ),
+          sliderInput(
+            "wellbeing_slider",
             "Choose how many hours engaging in an activity that promotes wellbeing:",
             min = 0,
             max = 20,
@@ -291,7 +298,7 @@ ui <- page_sidebar(
             "pray_slider",
             "Choose how many hours a week spent praying:",
             min = 0,
-            max = 3,
+            max = 5,
             value = 1
           ),
           sliderInput(
@@ -327,13 +334,13 @@ ui <- page_sidebar(
     nav_panel(title = "Assumptions", value = "assumption",
               navset_card_underline(
                 nav_panel(title = "Independence", text_card[[1]]),
-                nav_panel(title = "Residual vs Fitted", plot_card[[5]]),
-                nav_panel(title = "Normal QQ Plot", plot_card[[6]]),
+                nav_panel(title = "Residual vs Fitted", plot_card[[4]]),
+                nav_panel(title = "Normal QQ Plot", plot_card[[5]]),
                 nav_panel(title = "Outliers", text_card[[2]])
               )
     ),
     nav_panel(title = "Interaction Plot", value = "interaction", plot_card[[1]]),
-    nav_panel(title = "Effects", value = "effect", plot_card[[4]]),
+    nav_panel(title = "Effects", value = "effect", plot_card[[3]]),
     footer = tagList(
       conditionalPanel(
         condition = "input.tabs != 'intro' && input.tabs != 'effect'",
@@ -725,15 +732,15 @@ server <- function(input, output) {
   output$factorial <- renderPlotly({
     # Create factorial design grid
     df <- expand.grid(
-      sleep = c(0, 1),
-      exercise = c(0, 1),
-      nutrition = c(0, 1)
+      factorA = c(0, 1),
+      factorB = c(0, 1),
+      factorC = c(0, 1)
     )
     
     # Add hover text
-    df$sleep_text <- ifelse(df$sleep == 0, "Low", "High")
-    df$exercise_text <- ifelse(df$exercise == 0, "Low", "High")
-    df$nutrition_text <- ifelse(df$nutrition == 0, "Low", "High")
+    df$factorA_text <- ifelse(df$factorA == 0, "Low", "High")
+    df$factorB_text <- ifelse(df$factorB == 0, "Low", "High")
+    df$factorC_text <- ifelse(df$factorC == 0, "Low", "High")
     
     # Edge definitions and colors
     edges <- list(
@@ -751,12 +758,12 @@ server <- function(input, output) {
       v2 <- df[edge[2], ]
       
       # Find which factor changes
-      factor <- if (v1$sleep != v2$sleep) {
-        c("sleep", v1$sleep_text, v2$sleep_text)
-      } else if (v1$exercise != v2$exercise) {
-        c("exercise", v1$exercise_text, v2$exercise_text)
+      factor <- if (v1$factorA != v2$factorA) {
+        c("sleep", v1$factorA_text, v2$factorA_text)
+      } else if (v1$factorB != v2$factorB) {
+        c("exercise", v1$factorB_text, v2$factorB_text)
       } else {
-        c("nutrition", v1$nutrition_text, v2$nutrition_text)
+        c("nutrition", v1$factorC_text, v2$factorC_text)
       }
       
       # Create label
@@ -778,9 +785,9 @@ server <- function(input, output) {
       edge_label <- get_edge_info(df, edge)
       
       plot <- plot %>% add_trace(
-        x = df$sleep[edge],
-        y = df$exercise[edge],
-        z = df$nutrition[edge],
+        x = df$factorA[edge],
+        y = df$factorB[edge],
+        z = df$factorC[edge],
         type = 'scatter3d',
         mode = 'lines',
         name = edge_label,
@@ -792,20 +799,20 @@ server <- function(input, output) {
     
     # Add vertices
     hover_template <- paste(
-      "Sleep: %{customdata[1]}<br>",
-      "Exercise: %{customdata[2]}<br>",
-      "Nutrition: %{customdata[3]}",
+      "Sleep: %{customdata[0]}<br>",
+      "Exercise: %{customdata[1]}<br>",
+      "Nutrition: %{customdata[2]}",
       "<extra></extra>"
     )
     
     custom_data <- lapply(1:nrow(df), function(i) {
-      list(df$sleep_text[i], df$exercise_text[i], df$nutrition_text[i])
+      list(df$factorA_text[i], df$factorB_text[i], df$factorC_text[i])
     })
     
     plot <- plot %>% add_trace(
-      x = df$sleep,
-      y = df$exercise,
-      z = df$nutrition,
+      x = df$factorA,
+      y = df$factorB,
+      z = df$factorC,
       type = 'scatter3d',
       mode = 'markers',
       name = "Factor Points",
@@ -822,7 +829,6 @@ server <- function(input, output) {
         zaxis = list(title = 'Nutrition', showgrid = FALSE)
       ),
       title = "3-D Representation of the 2ᵏ Factorial Design",
-      margin = list(l = 60, r = 0),
       legend = list(
         title = list(text = "Factors and Levels"),
         orientation = "h",
@@ -871,6 +877,10 @@ server <- function(input, output) {
   })
   
   output$residual <- renderPlot({
+    numFactors <- length(input$phys)
+    if (numFactors < 2) {
+      return()
+    }
     model <- getModel()
     plot(fitted(model), residuals(model), 
          xlab = "Fitted Values", ylab = "Residuals",
@@ -879,12 +889,20 @@ server <- function(input, output) {
   })
   
   output$QQ <- renderPlot({
+    numFactors <- length(input$phys)
+    if (numFactors < 2) {
+      return()
+    }
     model <- getModel()
     qqnorm(residuals(model), main = "Normal Q-Q Plot", pch = 19, col = "blue")
     qqline(residuals(model), col = "red", lwd = 2)
   })
   
   output$outlier <- renderPrint({
+    numFactors <- length(input$phys)
+    if (numFactors < 2) {
+      return()
+    }
     model <- getModel()
     df <- f$data
     tryCatch({

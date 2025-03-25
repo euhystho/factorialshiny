@@ -35,6 +35,7 @@ plot_card <- list(
   card(
     card_header("Interaction Plot"),
     min_height = min_plot_height,
+    full_screen = TRUE,
     card_body(
       layout_columns(
         value_box(
@@ -53,26 +54,26 @@ plot_card <- list(
   ),
   card(
     card_header("Factorial Design Plot through Plotly"),
+    full_screen = TRUE,
     min_height = min_plot_height,
     plotlyOutput("factorial")
-  ),
-  card(
-    card_header("Assumptions"),
-    min_height = min_plot_height,
-    plotlyOutput("assumptions")
+    
   ),
   card(
     card_header("Effects"),
+    full_screen = TRUE,
     min_height = min_plot_height,
     plotOutput("effects_plot")
   ),
   card(
     card_header("Residual vs Fitted Graph"),
+    full_screen = TRUE,
     min_height = min_plot_height,
     plotOutput("residual")
   ),
   card(
     card_header("Normal QQ Plot"),
+    full_screen = TRUE,
     min_height = min_plot_height,
     plotOutput("QQ")
   )
