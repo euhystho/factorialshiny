@@ -44,16 +44,17 @@ ui <- page_sidebar(
     fillable = TRUE,
     accordion_filters <- accordion(
       id = "dims",
+      checkboxGroupButtons(
+        "phys1",
+        "Select up to three of the following factors:",
+        choices = c("Nutrition", "Sleep", "Exercise","Spirituality", "Cognition", "Community"),
+        selected = c("Nutrition","Sleep", "Exercise"),
+        size = 'sm'
+      )
+     ),
       accordion_panel(
         "Physical Health",
         icon = bs_icon("heart-pulse-fill"),
-        checkboxGroupButtons(
-          "phys",
-          "Select the following subfactors:",
-          choices = c("Nutrition", "Sleep", "Exercise"),
-          selected = c("Nutrition","Sleep"),
-          size = 'sm',
-        ),
         conditionalPanel(
           condition = "input.phys.includes('Nutrition')",
           card(
@@ -203,9 +204,9 @@ ui <- page_sidebar(
               grid = TRUE,
               force_edges = TRUE,
               choices = c("None","Light", "Intense")
-            ),
+            )
           )
-        ),
+        )
       ),
       accordion_panel(
         "Social Health",
@@ -323,9 +324,7 @@ ui <- page_sidebar(
             value = 2
           )
         )
-        
-      ),
-    ),
+    )
   ),
   tabsetPanel(
     id = "tabs",
@@ -873,7 +872,7 @@ server <- function(input, output) {
   })
   
   output$independence <- renderPrint({
-    cat("This design has Independence")
+    cat("When looking at our factors they are orthogonal since they do not depend on one another. Thus this design fufills the condition of independence.")
   })
   
   output$residual <- renderPlot({
