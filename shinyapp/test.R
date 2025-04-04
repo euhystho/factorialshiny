@@ -1,18 +1,15 @@
-# Create a sample data frame
-df <- data.frame(
-  ID = c(1, 2, 3, 4, 5),
-  Category = c("A", "B", "A", "C", "B"),
-  Value = c(10, 20, 15, 15, 30)
+factor_labels <- list(
+  "Sleep" = list("Insufficient", "Sufficient"),
+  "Exercise" = list("Light", "Intense"),
+  "Nutrition" = list("Mindless", "Purposeful")
 )
 
-# Find the rows where Category is "A"
-rows_to_keep <- which(df$Value == 15)
+#Just Modify these to add more Factors :)
+factors_plot_labels <- list(
+  "Sleep" = "Sleep Hours",
+  "Exercise" = "Exercise Intensity",
+  "Nutrition" = "Nutrition Intention"
+)
 
-# Print the row numbers
-print(rows_to_keep) # Output: 1 3
+factor_names <- names(factor_labels)
 
-# Subset the data frame to include only those rows
-subset_df <- df[rows_to_keep, ]
-
-# Print the subsetted data frame
-print(subset_df)

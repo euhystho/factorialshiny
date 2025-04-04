@@ -45,6 +45,17 @@ ui <- page_sidebar(
     accordion_filters <- accordion(
       id = "dims",
       accordion_panel(
+        "Participants",
+        icon = bs_icon("file-person-fill"),
+        selectInput(
+          inputId = "ind",
+          label = "Select one of the people:",
+          choices = individuals$name,
+          selected = c("Hello")
+        ),
+        uiOutput("bio")
+      ),
+      accordion_panel(
         "Physical Health",
         icon = bs_icon("heart-pulse-fill"),
         checkboxGroupButtons(
@@ -118,7 +129,7 @@ ui <- page_sidebar(
               "Choose the quality of Sleep:",
               grid = TRUE,
               force_edges = TRUE,
-              choices = c("Terrible", "Excellent")
+              choices = c("Poor", "Good", "Excellent")
             ),
             sliderInput(
               "sleep_eat_slider",
@@ -353,7 +364,6 @@ ui <- page_sidebar(
     )
   ),
   
-  
 )
 
 # Define server logic
@@ -543,6 +553,7 @@ server <- function(input, output) {
       # Run ANOVA with two factors
       f$result <- aov(H ~ A * B)
     }
+    
     # Store the data in the reactiveValues
     f$design <- design
     f$data <- data
@@ -565,7 +576,6 @@ server <- function(input, output) {
                   contrasts = list(A = contr.FrF2, B = contr.FrF2, C = contr.FrF2))
     }
     
-    
     return(model)
   })
   
@@ -578,37 +588,16 @@ server <- function(input, output) {
     }
     
     factorCalc()
-    
     data <- f$data
-    
-    A <- data$factorA
-    B <- data$factorB
-    H <- data$health
     
     # Extract the factors based on how many are selected
     if (length(input$phys) == 2) {
+      A <- data$factorA
+      B <- data$factorB
+      H <- data$health
       
       # Get the actual selected dimensions in their original order
       selected_dimensions <- input$phys
-      
-      # Create a standardized lookup system for factor combinations
-      factors_lookup <- list(
-        # Nutrition and Sleep combination
-        "Nutrition_Sleep" = list(
-          low_low = c("Mindless", "Insufficient"),
-          high_high = c("Purposeful", "Sufficient")
-        ),
-        # Nutrition and Exercise combination
-        "Nutrition_Exercise" = list(
-          low_low = c("Mindless", "Light"),
-          high_high = c("Purposeful", "Intense")
-        ),
-        # Sleep and Exercise combination
-        "Sleep_Exercise" = list(
-          low_low = c("Insufficient", "Light"),
-          high_high = c("Sufficient", "Intense")
-        )
-      )
       
       # Determine which combination we're dealing with
       combination <- paste(selected_dimensions, collapse = "_")
@@ -657,33 +646,8 @@ server <- function(input, output) {
         
         f$std_dev <- round(diff_health_sd, 2)
         f$health_value <- round(pct_improve, 1)
-        
       } 
-    } else if (length(input$phys) == 3) {
-      # If all three factors are selected, we can do a more comprehensive analysis
-      C <- data$factorC
-      
-      # Calculate means for all combinations
-      means <- tapply(H, list(A, B, C), mean)
-      sd <- tapply(H, list(A, B, C), mean)
-      
-      # Get worst case (all low) vs best case (all high)
-      worst_case <- means["Mindless", "Insufficient", "Moderate"]
-      best_case <- means["Purposeful", "Sufficient", "Intense"]
-      
-      # Calculate standard deviation for worst case
-      worst_case_sd <- sd["Mindless", "Insufficient", "Moderate"]
-      
-      # Calculate differences and approximate percentage improvement
-      diff_health <- best_case - worst_case
-      pct_improve <- (diff_health / worst_case) * 100
-      
-      # Standard deviation-based health improvement
-      diff_health_sd <- (best_case - worst_case) / worst_case_sd
-      
-      f$std_dev <- round(diff_health_sd, 2)
-      f$health_value <- round(pct_improve, 1)
-    }
+    } 
     
     return(TRUE) # Return TRUE to indicate success
   })
@@ -737,52 +701,59 @@ server <- function(input, output) {
       factorC = c(0, 1)
     )
     
-    # Add hover text
-    df$factorA_text <- ifelse(df$factorA == 0, "Low", "High")
-    df$factorB_text <- ifelse(df$factorB == 0, "Low", "High")
-    df$factorC_text <- ifelse(df$factorC == 0, "Low", "High")
+    # Add hover text using dynamic factor_names
+    df$factorA_text <- ifelse(df$factorA == 0, 
+                              factor_labels[[factor_names[1]]][[1]], 
+                              factor_labels[[factor_names[1]]][[2]])
+    df$factorB_text <- ifelse(df$factorB == 0, 
+                              factor_labels[[factor_names[2]]][[1]], 
+                              factor_labels[[factor_names[2]]][[2]])
+    df$factorC_text <- ifelse(df$factorC == 0, 
+                              factor_labels[[factor_names[3]]][[1]], 
+                              factor_labels[[factor_names[3]]][[2]])
     
-    # Edge definitions and colors
+    # Edge definitions 
     edges <- list(
       c(1, 2), c(2, 4), c(4, 3), c(3, 1),  # Bottom square
       c(5, 6), c(6, 8), c(8, 7), c(7, 5),  # Top square
       c(1, 5), c(2, 6), c(3, 7), c(4, 8)   # Vertical edges
     )
     
-    #Set up the color palette 
+    # Set up the color palette
     edge_colors <- paletteer_d("DresdenColor::paired")
     
-    # Function to determine changing factor and generate edge label
-    get_edge_info <- function(df, edge) {
+    # Function to determine changing factor and generate edge label dynamically
+    get_edge_info <- function(df, edge, factor_names) {
       v1 <- df[edge[1], ]
       v2 <- df[edge[2], ]
       
-      # Find which factor changes
-      factor <- if (v1$factorA != v2$factorA) {
-        c("sleep", v1$factorA_text, v2$factorA_text)
-      } else if (v1$factorB != v2$factorB) {
-        c("exercise", v1$factorB_text, v2$factorB_text)
-      } else {
-        c("nutrition", v1$factorC_text, v2$factorC_text)
-      }
+      # Identify which factor changes (columns 1:3 are factorA, factorB, factorC)
+      diff_factor <- which(v1[1:3] != v2[1:3])
+      if (length(diff_factor) != 1) stop
+      ("Error: Exactly one factor should change per edge")
       
-      # Create label
+      # Get the factor name and levels dynamically
+      factor_name <- factor_names[diff_factor]
+      level1 <- v1[[paste0("factor", LETTERS[diff_factor], "_text")]]
+      level2 <- v2[[paste0("factor", LETTERS[diff_factor], "_text")]]
+      
+      # Create label with proper capitalization
       label <- paste0(
-        toupper(substr(factor[1], 1, 1)),
-        substr(factor[1], 2, nchar(factor[1])),
-        ": ", factor[2], " → ", factor[3]
+        toupper(substr(factor_name, 1, 1)),
+        substr(factor_name, 2, nchar(factor_name)),
+        ": ", level1, " → ", level2
       )
       
       return(label)
     }
     
-    # Initialize plot
+    # Initialize plot 
     plot <- plot_ly()
     
-    # Add edges
+    # Add edges with dynamic labels
     for (i in seq_along(edges)) {
       edge <- edges[[i]]
-      edge_label <- get_edge_info(df, edge)
+      edge_label <- get_edge_info(df, edge, factor_names)
       
       plot <- plot %>% add_trace(
         x = df$factorA[edge],
@@ -798,12 +769,10 @@ server <- function(input, output) {
     }
     
     # Add vertices
-    hover_template <- paste(
-      "Sleep: %{customdata[0]}<br>",
-      "Exercise: %{customdata[1]}<br>",
-      "Nutrition: %{customdata[2]}",
-      "<extra></extra>"
-    )
+    hover_template <- paste(factor_names[1], ": %{customdata[0]}<br>",
+                            factor_names[2], ": %{customdata[1]}<br>",
+                            factor_names[3], ": %{customdata[2]}",
+                            "<extra></extra>")
     
     custom_data <- lapply(1:nrow(df), function(i) {
       list(df$factorA_text[i], df$factorB_text[i], df$factorC_text[i])
@@ -821,12 +790,12 @@ server <- function(input, output) {
       hovertemplate = hover_template
     )
     
-    # Layout configuration
+    # Layout configuration 
     plot %>% layout(
       scene = list(
-        xaxis = list(title = 'Sleep', showgrid = FALSE),
-        yaxis = list(title = 'Exercise', showgrid = FALSE),
-        zaxis = list(title = 'Nutrition', showgrid = FALSE)
+        xaxis = list(title = factor_names[1], showgrid = FALSE),
+        yaxis = list(title = factor_names[2], showgrid = FALSE),
+        zaxis = list(title = factor_names[3], showgrid = FALSE)
       ),
       title = "3-D Representation of the 2ᵏ Factorial Design",
       legend = list(
@@ -981,6 +950,10 @@ server <- function(input, output) {
     }
     factorCalc()
     table <- displayTable(f, input$phys, "design")
+  })
+  
+  output$bio <- renderUI({
+    bio <- as.character(individuals[trimws(individuals$name) == input$ind, "biography"][1])
   })
   
 }

@@ -1,18 +1,48 @@
 library(stringr)
 
-#Just Modify these to add more Factors :)
-factors_plot_labels <- list(
-  "Sleep" = "Sleep Hours",
-  "Exercise" = "Exercise Intensity",
-  "Nutrition" = "Nutrition Intention"
-)
+individuals <- readRDS("Data/ind_data.rds")
 
+#Just modify this to change factors for everything :)
 factor_labels <- list(
   "Sleep" = list("Insufficient", "Sufficient"),
   "Exercise" = list("Light", "Intense"),
   "Nutrition" = list("Mindless", "Purposeful")
 )
 
+factor_names <- names(factor_labels)
+
+#Change these to Change Interaction Plot Specific Factors
+  factors_plot_labels <- list(
+    "Sleep" = "Sleep Hours",
+    "Exercise" = "Exercise Intensity",
+    "Nutrition" = "Nutrition Intention"
+  )
+  
+  
+  # Create a standardized lookup system for factor combinations
+  factors_lookup <- list(
+    # Nutrition and Sleep combination
+    "Nutrition_Sleep" = list(
+      low_low = c(factor_labels[[factor_names[3]]][[1]], 
+                  factor_labels[[factor_names[1]]][[1]]),
+      high_high = c(factor_labels[[factor_names[3]]][[2]], 
+                    factor_labels[[factor_names[1]]][[2]])
+    ),
+    # Nutrition and Exercise combination
+    "Nutrition_Exercise" = list(
+      low_low = c(factor_labels[[factor_names[3]]][[1]], 
+                  factor_labels[[factor_names[2]]][[1]]),
+      high_high = c(factor_labels[[factor_names[3]]][[2]], 
+                    factor_labels[[factor_names[2]]][[2]])
+    ),
+    # Sleep and Exercise combination
+    "Sleep_Exercise" = list(
+      low_low = c(factor_labels[[factor_names[1]]][[1]], 
+                  factor_labels[[factor_names[2]]][[1]]),
+      high_high = c(factor_labels[[factor_names[1]]][[2]], 
+                    factor_labels[[factor_names[2]]][[2]])
+    )
+  )
 
 #Check if the user is mobile :)
 mobileDetect <- function(inputId, value = 0) {
@@ -60,6 +90,7 @@ labelTableFactors <- function(df, selected_factors){
     }
     return(df)
 }
+
 
 #Assign the Selected Factors to the Effect Plot to make it User-Friendly
 formatSigEffect <- function(labels, selected_factors){

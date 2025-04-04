@@ -19,8 +19,8 @@ intro_card <- card(
     ),
     HTML("<b>Sleep:</b>"),
     tags$ul(
-      tags$li("Sufficient:  7 hours of sleep"),
-      tags$li("Insufficient: < 7 hours of sleep")
+      tags$li("Sufficient: 7 hours of sleep"),
+      tags$li("Insufficient: ≤ 7 hours of sleep")
     ),
     HTML("<b>Exercise:</b> <i>Exercise Intensity</i>"),
     tags$ul(

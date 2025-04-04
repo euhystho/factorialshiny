@@ -1,0 +1,19 @@
+---
+title: "test_people"
+output: html_document
+---
+
+```{r}
+# Convert JSON to RDS
+library(jsonlite)
+data <- fromJSON("Data/individual_data.json")
+saveRDS(data, "Data/ind_data.rds")
+```
+
+```{r}
+individuals <- readRDS("Data/ind_data.rds")
+library(tidyverse)
+name = "Kelly"
+bio <- as.character(individuals[trimws(individuals$name) == name, "biography"][1])
+```
+
