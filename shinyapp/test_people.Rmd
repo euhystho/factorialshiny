@@ -17,3 +17,33 @@ name = "Kelly"
 bio <- as.character(individuals[trimws(individuals$name) == name, "biography"][1])
 ```
 
+```{r}
+# Example dataframe
+df <- readRDS("Data/ind_data.rds")
+
+# Function to convert the string to a numeric vector
+convert_to_range <- function(string) {
+  # Split the string by comma
+  split_values <- unlist(strsplit(as.character(string), ","))
+  
+  # Convert to numeric
+  numeric_vec <- as.numeric(split_values)
+  
+  # Ensure exactly two values (left and right of comma)
+  if (length(numeric_vec) == 2) {
+    return(numeric_vec)
+  } else {
+    warning("Invalid format: expected two numbers separated by a comma")
+    return(c(NA, NA))  # Return NA if format is wrong
+  }
+}
+
+saveRDS(df, "Data/ind_data.rds")
+```
+
+```{r}
+individuals <- readRDS("Data/ind_data.rds")
+print(individuals$name[1])
+
+```
+

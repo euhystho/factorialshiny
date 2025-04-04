@@ -1,0 +1,10 @@
+#factors .btn-group {
+  flex-wrap: wrap;
+  max-width: 280px; 
+}
+
+#phys .btn-group {
+  flex-wrap: wrap;
+  max-width: 280px; 
+}
+

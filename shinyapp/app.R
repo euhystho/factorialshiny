@@ -33,6 +33,9 @@ ui <- page_sidebar(
   title = "Effects of Self-Efficacy on Post-Menopausal Women's Health",
   window_title = "2^k Factorial Design of Healthy Habits Circle Simulations",
   
+  tags$head(
+    tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+  ),
   # Mobile Friendly:
   fillable_mobile = TRUE,
   mobileDetect('isMobile'),
@@ -42,30 +45,37 @@ ui <- page_sidebar(
     title = "Health Dimensions",
     width = 300,
     fillable = TRUE,
+    selectInput(
+      inputId = "person",
+      label = "Select one of the individuals:",
+      choices = unique(individuals$name),
+      selected = unique(individuals$name)[1]
+    ),
+    checkboxGroupButtons(
+      "factors",
+      "Select the following subfactors:",
+      choices = c("Nutrition", "Sleep", "Exercise", "Spirituality", "Socialization", "Wellbeing"),
+      selected = c("Nutrition","Sleep"),
+      justified = TRUE,
+      size = 'sm',
+    ),
     accordion_filters <- accordion(
       id = "dims",
-      checkboxGroupButtons(
-        "phys1",
-        "Select up to three of the following factors:",
-        choices = c("Nutrition", "Sleep", "Exercise","Spirituality", "Cognition", "Community"),
-        selected = c("Nutrition","Sleep", "Exercise"),
-        size = 'sm'
-      )
-     ),
       accordion_panel(
-        "Participants",
+        "Participant Biography",
         icon = bs_icon("file-person-fill"),
-        selectInput(
-          inputId = "ind",
-          label = "Select one of the people:",
-          choices = individuals$name,
-          selected = c("Hello")
-        ),
         uiOutput("bio")
       ),
       accordion_panel(
         "Physical Health",
         icon = bs_icon("heart-pulse-fill"),
+        checkboxGroupButtons(
+          "phys",
+          "Select the following subfactors:",
+          choices = c("Nutrition", "Sleep", "Exercise"),
+          selected = c("Nutrition","Sleep"),
+          size = 'sm',
+        ),
         conditionalPanel(
           condition = "input.phys.includes('Nutrition')",
           card(
@@ -123,7 +133,7 @@ ui <- page_sidebar(
               "Choose how many hours of Sleep:",
               min = 0,
               max = 10,
-              value = c(7, 9)
+              value = c(6, 9)
             ),
             sliderTextInput(
               "sleep_qual_slider",
@@ -215,9 +225,9 @@ ui <- page_sidebar(
               grid = TRUE,
               force_edges = TRUE,
               choices = c("None","Light", "Intense")
-            )
+            ),
           )
-        )
+        ),
       ),
       accordion_panel(
         "Social Health",
@@ -335,7 +345,9 @@ ui <- page_sidebar(
             value = 2
           )
         )
-    )
+        
+      ),
+    ),
   ),
   tabsetPanel(
     id = "tabs",
@@ -366,7 +378,7 @@ ui <- page_sidebar(
 )
 
 # Define server logic
-server <- function(input, output) {
+server <- function(input, output, session) {
   
   f <- reactiveValues(
     data = NULL,
@@ -378,19 +390,19 @@ server <- function(input, output) {
   
   factorCalc <- reactive({
     # Create a vector of the number of levels for each factor
-    numSelectedFactors = length(input$phys)
+    numSelectedFactors = length(input$factors)
     
     # Get selected factors
     first_factor <- if (numSelectedFactors >= 1)
-      input$phys[1]
+      input$factors[1]
     else
       NULL
     second_factor <- if (numSelectedFactors >= 2)
-      input$phys[2]
+      input$factors[2]
     else
       NULL
     third_factor <- if (numSelectedFactors >= 3)
-      input$phys[3]
+      input$factors[3]
     else
       NULL
     
@@ -404,7 +416,7 @@ server <- function(input, output) {
       # For 3 factors
       levels <- c(2, 2, 2)
       factorNames <- c(first_factor, second_factor, third_factor)
-      factorLabels <- labelFactors(input$phys, factor_labels)
+      factorLabels <- labelFactors(input$factors, factor_labels)
       
       firstFactorLow <- factorLabels[[1]][[1]]
       firstFactorHigh <- factorLabels[[1]][[2]]
@@ -510,7 +522,7 @@ server <- function(input, output) {
       # For 2 factors
       levels <- c(2, 2)
       factorNames <- c(first_factor, second_factor)
-      factorLabels <- labelFactors(input$phys, factor_labels)
+      factorLabels <- labelFactors(input$factors, factor_labels)
       
       firstFactorLow <- factorLabels[[1]][[1]]
       firstFactorHigh <- factorLabels[[1]][[2]]
@@ -559,7 +571,7 @@ server <- function(input, output) {
   })
   
   getModel <- reactive({
-    numSelectedFactors = length(input$phys)
+    numSelectedFactors = length(input$factors)
     factorCalc()
     df <- f$data
     A <- df$factorA
@@ -581,22 +593,23 @@ server <- function(input, output) {
   # Function to generate summary without creating plots
   generate_summary <- reactive({
     # Ensure at least 2 health dimensions are selected
-    if (length(input$phys) < 2) {
+    if (length(input$factors) < 2) {
       print("Please select at least 2 subfactors for analysis.")
       return(NULL)
     }
     
     factorCalc()
     data <- f$data
+    factors_lookup <- lookupFactors()
     
     # Extract the factors based on how many are selected
-    if (length(input$phys) == 2) {
+    if (length(input$factors) == 2) {
       A <- data$factorA
       B <- data$factorB
       H <- data$health
       
       # Get the actual selected dimensions in their original order
-      selected_dimensions <- input$phys
+      selected_dimensions <- input$factors
       
       # Determine which combination we're dealing with
       combination <- paste(selected_dimensions, collapse = "_")
@@ -651,9 +664,36 @@ server <- function(input, output) {
     return(TRUE) # Return TRUE to indicate success
   })
   
+  selected_data <- reactive({
+    req(input$person) 
+    row <- which(individuals$name == input$person)
+    if (length(row) == 0) return(NULL)
+    individuals[row, ]  
+  })
+  
+  observe({
+    data <- selected_data()
+    if (is.null(data)) return()
+    
+    for (col in names(data)){
+      if (col == "person") next
+      
+      value <- data[[col]]
+      
+      if(is.numeric(value) || is.list(value)){
+        if (is.list(value)) {
+          value <- unlist(value)  # Ensure it's a numeric vector
+        }
+        updateSliderInput(session, col, value = value)
+      } else if (is.character(value)) {
+        updateSliderTextInput(session, col, selected = value)
+      } 
+    }
+  })
+  
   # Update the output renderers to handle the case when fewer than 2 dimensions are selected
   output$sd <- renderText({
-    isTwoFactor = length(input$phys) == 2
+    isTwoFactor = length(input$factors) == 2
     if (!isTwoFactor || is.null(generate_summary())) {
       return("N/A")
     }
@@ -661,7 +701,7 @@ server <- function(input, output) {
   })
   
   output$health_change <- renderText({
-    isTwoFactor = length(input$phys) == 2
+    isTwoFactor = length(input$factors) == 2
     if (!isTwoFactor || is.null(generate_summary())) {
       return("N/A")
     }
@@ -669,7 +709,7 @@ server <- function(input, output) {
   })
   
   output$interaction_plot <- renderPlot({
-    numFactors <- length(input$phys)
+    numFactors <- length(input$factors)
     if (numFactors < 2 || numFactors == 3) {
       plot(0, 0, type = "n", axes = FALSE, ann = FALSE)
       text(0, 0, "Please select 2 subfactors under the Physical Health panel!", cex = 1.5)
@@ -680,7 +720,7 @@ server <- function(input, output) {
     df <- f$data
     
     # Use the selected dimensions for plot labels
-    labels <- labelFactors(input$phys, factors_plot_labels)
+    labels <- labelFactors(input$factors, factors_plot_labels)
     
     interaction.plot(
       df$factorA, 
@@ -834,18 +874,18 @@ server <- function(input, output) {
     parnames <- names(coeffs)
     labeled <- abs_coeffs > (2 * sd(abs_coeffs))
     if (any(labeled)) {
-      factor_labels <- formatSigEffect(parnames[labeled], input$phys)
+      factor_labels <- formatSigEffect(parnames[labeled], input$factors)
       text(plot_data$x[labeled], plot_data$y[labeled], 
            labels = factor_labels, pos = 2)
     }
   })
   
   output$independence <- renderPrint({
-    cat("When looking at our factors they are orthogonal since they do not depend on one another. Thus this design fufills the condition of independence.")
+    cat("When looking at our factors they are orthogonal since they do not depend on one another. \nThus, this design fufills the condition of independence.")
   })
   
   output$residual <- renderPlot({
-    numFactors <- length(input$phys)
+    numFactors <- length(input$factors)
     if (numFactors < 2) {
       return()
     }
@@ -857,7 +897,7 @@ server <- function(input, output) {
   })
   
   output$QQ <- renderPlot({
-    numFactors <- length(input$phys)
+    numFactors <- length(input$factors)
     if (numFactors < 2) {
       return()
     }
@@ -867,7 +907,7 @@ server <- function(input, output) {
   })
   
   output$outlier <- renderPrint({
-    numFactors <- length(input$phys)
+    numFactors <- length(input$factors)
     if (numFactors < 2) {
       return()
     }
@@ -909,7 +949,7 @@ server <- function(input, output) {
     )
     sig_effects <- which(effects_df[[5]] < 0.05)
     
-    effects_df <- labelTableFactors(effects_df,input$phys)
+    effects_df <- labelTableFactors(effects_df,input$factors)
     
     
     HTML(
@@ -936,24 +976,27 @@ server <- function(input, output) {
   })
   
   output$anova <- renderUI({
-    if (length(input$phys) < 2){
+    if (length(input$factors) < 2){
       return()
     }
     factorCalc()
-    table <- displayTable(f,input$phys, "anova")
+    table <- displayTable(f,input$factors, "anova")
   })
   
   output$design <- renderUI({
-    if (length(input$phys) < 2){
+    if (length(input$factors) < 2){
       return()
     }
     factorCalc()
-    table <- displayTable(f, input$phys, "design")
+    table <- displayTable(f, input$factors, "design")
   })
   
   output$bio <- renderUI({
-    bio <- as.character(individuals[trimws(individuals$name) == input$ind, "biography"][1])
+    bio <- as.character(individuals[trimws(individuals$name) == input$person,
+                                    "biography"][1])
   })
+  
+
   
 }
 

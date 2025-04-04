@@ -6,43 +6,47 @@ individuals <- readRDS("Data/ind_data.rds")
 factor_labels <- list(
   "Sleep" = list("Insufficient", "Sufficient"),
   "Exercise" = list("Light", "Intense"),
-  "Nutrition" = list("Mindless", "Purposeful")
+  "Nutrition" = list("Mindless", "Purposeful"),
+  "Spirituality" = list("Infrequent", "Regular"),
+  "Socialization" = list("Isolated", "Outgoing"),
+  "Wellbeing" = list("Neglect", "Nurture")
 )
-
 factor_names <- names(factor_labels)
 
 #Change these to Change Interaction Plot Specific Factors
   factors_plot_labels <- list(
     "Sleep" = "Sleep Hours",
     "Exercise" = "Exercise Intensity",
-    "Nutrition" = "Nutrition Intention"
+    "Nutrition" = "Nutrition Intention",
+    "Spirituality" = "Spiritual Engagement",
+    "Socialization" = "Social Connection",
+    "Wellbeing" = "Wellbeing Intention"
   )
   
+  lookupFactors <- function(){
+    # Dynamic factors_lookup
+    factors_lookup <- list()
+    
+    # Generate all possible two-factor combinations
+    for (i in seq_along(factor_names)) {
+      for (j in seq(i + 1, length(factor_names))) {
+        factor1 <- factor_names[i]
+        factor2 <- factor_names[j]
+        
+        # Create sorted combination key
+        combo_key <- paste(sort(c(factor1, factor2)), collapse = "_")
+        
+        # Define low_low and high_high
+        factors_lookup[[combo_key]] <- list(
+          low_low = c(factor_labels[[factor1]][[1]], factor_labels[[factor2]][[1]]),
+          high_high = c(factor_labels[[factor1]][[2]], factor_labels[[factor2]][[2]])
+        )
+      }
+    }
+    return(factors_lookup)
+    
+  }
   
-  # Create a standardized lookup system for factor combinations
-  factors_lookup <- list(
-    # Nutrition and Sleep combination
-    "Nutrition_Sleep" = list(
-      low_low = c(factor_labels[[factor_names[3]]][[1]], 
-                  factor_labels[[factor_names[1]]][[1]]),
-      high_high = c(factor_labels[[factor_names[3]]][[2]], 
-                    factor_labels[[factor_names[1]]][[2]])
-    ),
-    # Nutrition and Exercise combination
-    "Nutrition_Exercise" = list(
-      low_low = c(factor_labels[[factor_names[3]]][[1]], 
-                  factor_labels[[factor_names[2]]][[1]]),
-      high_high = c(factor_labels[[factor_names[3]]][[2]], 
-                    factor_labels[[factor_names[2]]][[2]])
-    ),
-    # Sleep and Exercise combination
-    "Sleep_Exercise" = list(
-      low_low = c(factor_labels[[factor_names[1]]][[1]], 
-                  factor_labels[[factor_names[2]]][[1]]),
-      high_high = c(factor_labels[[factor_names[1]]][[2]], 
-                    factor_labels[[factor_names[2]]][[2]])
-    )
-  )
 
 #Check if the user is mobile :)
 mobileDetect <- function(inputId, value = 0) {
