@@ -594,7 +594,8 @@ server <- function(input, output, session) {
   generate_summary <- reactive({
     # Ensure at least 2 health dimensions are selected
     if (length(input$factors) < 2) {
-      print("Please select at least 2 subfactors for analysis.")
+      f$std_dev <- NULL
+      f$health_value <- NULL
       return(NULL)
     }
     
@@ -602,68 +603,79 @@ server <- function(input, output, session) {
     data <- f$data
     factors_lookup <- lookupFactors()
     
-    # Extract the factors based on how many are selected
+    # Initialize default values
+    f$std_dev <- NA
+    f$health_value <- NA
+    
+    # Extract the factors (only handle 2 factors for now)
     if (length(input$factors) == 2) {
+      # Get the two selected factors
+      selected_factors <- input$factors
+      factor1 <- selected_factors[1]
+      factor2 <- selected_factors[2]
+      
+      # Get factor labels from factor_labels
+      low1 <- factor_labels[[factor1]][[1]]  # Low level for first factor
+      high1 <- factor_labels[[factor1]][[2]] # High level for first factor
+      low2 <- factor_labels[[factor2]][[1]]  # Low level for second factor
+      high2 <- factor_labels[[factor2]][[2]] # High level for second factor
+      
+      
       A <- data$factorA
       B <- data$factorB
       H <- data$health
       
-      # Get the actual selected dimensions in their original order
-      selected_dimensions <- input$factors
+      # Map the factor levels to numeric or categorical for tapply
+      # Assume factorA and factorB in data are already labeled as "Low"/"High" or similar
+      levels_A <- unique(A)
+      levels_B <- unique(B)
       
-      # Determine which combination we're dealing with
-      combination <- paste(selected_dimensions, collapse = "_")
+      # Ensure levels match factor_labels
+      if (!all(levels_A %in% c(low1, high1)) || !all(levels_B %in% c(low2, high2))) {
+        warning("Factor levels in data do not match expected labels. Attempting to map.")
+        # Map data levels to low/high
+        A_mapped <- ifelse(A %in% c(low1), "Low", "High")
+        B_mapped <- ifelse(B %in% c(low2), "Low", "High")
+      } else {
+        A_mapped <- A
+        B_mapped <- B
+      }
       
       # Calculate means and standard deviations
-      means <- tapply(H, list(A, B), mean)
-      sd <- tapply(H, list(A, B), sd)
+      means <- tapply(H, list(A_mapped, B_mapped), mean, na.rm = TRUE)
+      sd <- tapply(H, list(A_mapped, B_mapped), sd, na.rm = TRUE)
       
-      # Get the appropriate factor level names based on the combination
-      if (combination %in% names(factors_lookup) ||
-          paste(rev(selected_dimensions), collapse = "_") %in% names(factors_lookup)) {
-        # Get correct lookup key (handle reversed order)
-        lookup_key <- ifelse(
-          combination %in% names(factors_lookup),
-          combination,
-          paste(rev(selected_dimensions), collapse = "_")
-        )
-        
-        # Get the factor level combinations
-        low_low_levels <- factors_lookup[[lookup_key]]$low_low
-        high_high_levels <- factors_lookup[[lookup_key]]$high_high
-        
-        # Extract specific scenarios for the summary (worst vs best case)
-        if (combination %in% names(factors_lookup)) {
-          # Standard order
-          mod_insuf <- means[low_low_levels[1], low_low_levels[2]]
-          int_suf <- means[high_high_levels[1], high_high_levels[2]]
-          
-          # Extract standard deviations for these scenarios
-          mod_insuf_sd <- sd[low_low_levels[1], low_low_levels[2]]
-        } else {
-          # Reversed order (B, A instead of A, B)
-          mod_insuf <- means[low_low_levels[2], low_low_levels[1]]
-          int_suf <- means[high_high_levels[2], high_high_levels[1]]
-          
-          # Extract standard deviations for these scenarios
-          mod_insuf_sd <- sd[low_low_levels[2], low_low_levels[1]]
-        }
-        
-        # Calculate differences and approximate percentage improvement
-        diff_health <- int_suf - mod_insuf
-        pct_improve <- (diff_health / mod_insuf) * 100
-        
-        # Standard deviation-based health improvement
-        diff_health_sd <- (int_suf - mod_insuf) / mod_insuf_sd
-        
-        f$std_dev <- round(diff_health_sd, 2)
-        f$health_value <- round(pct_improve, 1)
-      } 
-    } 
+      
+      # Define low_low and high_high based on factor_labels (no need for complex lookup)
+      low_low <- c(low1, low2)  # Worst case: both factors at low level
+      high_high <- c(high1, high2)  # Best case: both factors at high level
+      
+      # Extract indices for low_low and high_high
+      low_low_idx <- c(match(low_low[1], dimnames(means)[[1]]), match(low_low[2], dimnames(means)[[2]]))
+      high_high_idx <- c(match(high_high[1], dimnames(means)[[1]]), match(high_high[2], dimnames(means)[[2]]))
+      
+      
+      # Extract values
+      mod_insuf <- means[low_low_idx[1], low_low_idx[2]]  # Worst case
+      int_suf <- means[high_high_idx[1], high_high_idx[2]]  # Best case
+      
+      mod_insuf_sd <- sd[low_low_idx[1], low_low_idx[2]]  # SD for worst case
+
+      
+      # Calculate differences and approximate percentage improvement
+      diff_health <- int_suf - mod_insuf
+      pct_improve <- if (mod_insuf != 0) (diff_health / mod_insuf) * 100 else 0  # Avoid division by zero
+      
+      # Standard deviation-based health improvement
+      diff_health_sd <- if (mod_insuf_sd != 0) (int_suf - mod_insuf) / mod_insuf_sd else 0  # Avoid division by zero
+      
+      # Store results
+      f$std_dev <- round(diff_health_sd, 2)
+      f$health_value <- round(pct_improve, 1)
+    }
     
-    return(TRUE) # Return TRUE to indicate success
+    return(TRUE)  # Indicate success
   })
-  
   selected_data <- reactive({
     req(input$person) 
     row <- which(individuals$name == input$person)
