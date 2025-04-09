@@ -13,6 +13,7 @@ library(paletteer)
 
 #Plot related libraries
 library(plotly)
+library(echarts4r)
 library(kableExtra)
 library(tidyverse)
 library(dae)
@@ -407,7 +408,7 @@ server <- function(input, output, session) {
       NULL
     
     # Set default factor labels
-    firstFactorLabels <- c("Low", "High") 
+    firstFactorLabels <- c("Low", "High")  # nolint
     secondFactorLabels <- c("Low", "High") 
     thirdFactorLabels <- c("Low", "High")
     
@@ -676,6 +677,7 @@ server <- function(input, output, session) {
     
     return(TRUE)  # Indicate success
   })
+  
   selected_data <- reactive({
     req(input$person) 
     row <- which(individuals$name == input$person)
@@ -720,7 +722,7 @@ server <- function(input, output, session) {
     return(paste0(f$health_value, "%"))
   })
   
-  output$interaction_plot <- renderPlot({
+  output$interaction_plot <- renderEcharts4r({
     numFactors <- length(input$factors)
     if (numFactors < 2 || numFactors == 3) {
       plot(0, 0, type = "n", axes = FALSE, ann = FALSE)
@@ -734,14 +736,33 @@ server <- function(input, output, session) {
     # Use the selected dimensions for plot labels
     labels <- labelFactors(input$factors, factors_plot_labels)
     
-    interaction.plot(
-      df$factorA, 
-      df$factorB, 
-      df$health,
-      xlab = labels[1],
-      ylab = "Overall Health Score",
-      trace.label = labels[2]
-    )
+    # Summarize the data to get means for each combination (similar to interaction.plot)
+    sum_df <- df %>%
+      group_by(factorA, factorB) %>%
+      summarise(Mean_Health = mean(health), .groups = 'keep') %>%
+      ungroup()
+    
+    plot <- sum_df %>%
+      group_by(factorB) %>%
+      e_charts(x = factorA) %>%  
+      e_line(serie = Mean_Health, legend = TRUE) %>%  
+      e_aria(enabled = TRUE, decal = list(show = TRUE)) %>%
+      e_tooltip(trigger = "axis") %>%  # Show tooltip on hover
+      e_title(text = "Interaction Plot") %>%  # Title
+      e_x_axis(name = labels[1]) %>%  # X-axis label
+      e_y_axis(name = "Health") %>%  # Y-axis label
+      e_toolbox_feature("dataZoom") %>%
+      e_toolbox_feature(feature = "reset") %>%
+      e_legend(formatter = paste0("{name} ", labels[2]))  # Legend title
+    plot
+    # interaction.plot(
+    #   df$factorA, 
+    #   df$factorB, 
+    #   df$health,
+    #   xlab = labels[1],
+    #   ylab = "Overall Health Score",
+    #   trace.label = labels[2]
+    # )
   })
   
   output$factorial <- renderPlotly({

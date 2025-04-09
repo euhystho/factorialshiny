@@ -1,0 +1,578 @@
+---
+title: "2k Factorial"
+author: "Rachel Hart"
+date: "`r Sys.Date()`"
+output: html_document
+---
+# 2k Factorial Design
+
+## Loading Libraries
+```{r, message = FALSE}
+library(designr)
+library(AlgDesign)
+library(tidyverse)
+library(ggplot2)
+library(plotly)
+library(knitr)
+library(kableExtra)
+library(AlgDesign)
+```
+
+## Two Factors (2^2)
+
+## Simulating the Data for Two Factors
+```{r}
+#Create a vector column for thickness 
+health2<-c(rnorm(15, 4.5, 2.5), rnorm(15, 3.5, 2.5), rnorm(15, 5.5, 2.5), rnorm(15, 2.5, 2.5))
+
+#Create the factors 
+sleep2 <- c(rep("Insufficient",15), 
+						rep("Sufficient",15), 
+						rep("Sufficient",15), 
+						rep("Insufficient",15)) 
+
+exercise2 <- c(rep("Strenuous",15), 
+					rep("Moderate",15), 
+					rep("Strenuous",15), 
+					rep("Moderate",15)) 
+
+#Merge the data into a dataset 'data' 
+data<- data.frame(sleep2, 
+				exercise2, 
+				health2) 
+data
+
+#Assign the factors into variables 
+A = data$sleep2 
+B = data$exercise2 
+Z = data$health2 
+
+
+#Plot the interaction plot 
+interaction.plot(A, B, Z, 
+				xlab = "Sleep", 
+				ylab = "Health") 
+
+
+```
+```{r}
+# Your existing code (unchanged)
+# Create a vector column for thickness 
+health2 <- c(rnorm(15, 4.5, 2.5), rnorm(15, 3.5, 2.5), rnorm(15, 5.5, 2.5), rnorm(15, 2.5, 2.5))
+
+# Create the factors 
+sleep2 <- c(rep("Insufficient",15), 
+            rep("Sufficient",15), 
+            rep("Sufficient",15), 
+            rep("Insufficient",15)) 
+
+exercise2 <- c(rep("Strenuous",15), 
+               rep("Moderate",15), 
+               rep("Strenuous",15), 
+               rep("Moderate",15)) 
+
+# Merge the data into a dataset 'data' 
+data <- data.frame(sleep2, 
+                   exercise2, 
+                   health2) 
+
+# Assign the factors into variables (optional, since they're already in the data frame)
+A <- data$sleep2 
+B <- data$exercise2 
+Z <- data$health2 
+
+#Plot the interaction plot 
+interaction.plot(A, B, Z, 
+				xlab = "Sleep", 
+				ylab = "Health") 
+# Create the improved interaction plot using ggplot2
+library(ggplot2)
+
+# Summarize the data to get means and standard errors for each combination
+library(dplyr)
+
+summary_data <- data %>%
+  group_by(sleep2, exercise2) %>%
+  summarise(Mean_Health = mean(health2), 
+            SE_Health = sd(health2)/sqrt(n())) %>%
+  ungroup()
+
+# Create the plot
+ggplot(summary_data, aes(x = sleep2, y = Mean_Health, color = exercise2, group = exercise2)) +
+  geom_point(size = 3) +  # Points for means
+  geom_line(linewidth = 1) +  # Lines connecting means
+  geom_errorbar(aes(ymin = Mean_Health - SE_Health, ymax = Mean_Health + SE_Health), width = 0.2) +  # Error bars
+  labs(title = "Interaction Plot: Health vs. Sleep and Exercise",
+       x = "Sleep",
+       y = "Mean Health",
+       color = "Exercise Level") +  # Clear labels
+  theme_minimal() +  # Clean, modern theme
+  scale_color_brewer(palette = "Set1")  # Professional color palette
+
+# Optional: Rotate x-axis labels if they overlap
+theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+### Two Factor Two Levels
+```{r}
+factors = 2
+levels = c(-1,1)
+x1 = c()
+x2 = c()
+
+for (j in 1:length(levels)) {
+    for (i in 1:length(levels)) {
+    x1 = c(x1, levels[i])
+    x2 = c(x2, levels[j])
+  }
+}
+
+twodf = data.frame(row.names =  c(1:length(x1)), x1,x2)
+
+kable(twodf, row.names = T)  |>
+  kable_styling('striped',fixed_thead = T, full_width = F) |>
+
+  column_spec(2,color= 'white',
+              background = spec_color(twodf$x1,end = 0.7, option = 'A' )) |>
+  column_spec(3,color= 'white',
+              background = spec_color(twodf$x2 ,end = 0.7, option = 'A' ))
+
+plot_ly(twodf, x = ~x1, y = ~x2) 
+```
+
+### Modeling
+```{r}
+result <-aov(Z ~ A*B) 
+anova(result) 
+
+linear_two <- lm(Z ~ A*B)
+linear_two
+
+```
+
+
+# 3 Factor Simulated Interaction Plots
+
+
+```{r}
+health <-c(rnorm(15, 2.5, 1.5), rnorm(15, 3.5, 1.5), rnorm(15, 3.5, 1.5), rnorm(15, 4.5, 1.5), 
+          rnorm(15, 3.5, 1.5), rnorm(15, 4.5, 1.5), rnorm(15, 4.5, 1.5), rnorm(15, 5.5, 1.5))
+
+#Create the factors 
+sleep <- c(rep("Insufficient",15), 
+						rep("Sufficient",15), 
+						rep("Insufficient",15), 
+						rep("Sufficient",15),
+            rep("Insufficient",15), 
+						rep("Sufficient",15), 
+						rep("Insufficient",15), 
+						rep("Sufficient",15))
+
+exercise <- c(rep("Moderate",15), 
+					    rep("Moderate",15), 
+					    rep("Strenuous",15), 
+					    rep("Strenuous",15),
+					    rep("Moderate",15), 
+						  rep("Moderate",15), 
+						  rep("Strenuous",15), 
+						  rep("Strenuous",15)) 
+
+nutrition <- c(rep("Mindless",15), 
+					  rep("Mindless",15), 
+					  rep("Mindless",15), 
+					  rep("Mindless",15),
+					  rep("Purposeful",15), 
+						rep("Purposeful",15), 
+						rep("Purposeful",15), 
+						rep("Purposeful",15))
+
+#Merge the data into a dataset 'data' 
+data<- data.frame(sleep, exercise, nutrition, health) 
+data
+
+#Assign the factors into variables 
+S = data$sleep 
+E = data$exercise 
+N = data$nutrition
+H = data$health
+
+```
+## Main Effects
+```{r}
+sleep_effect <- data %>%
+  group_by(sleep) %>%
+  summarise(mean_health = mean(health))
+sleep_effect
+
+exercise_effect <- data %>%
+  group_by(exercise) %>%
+  summarise(mean_health = mean(health))
+exercise_effect
+
+nutrition_effect <- data %>%
+  group_by(nutrition) %>%
+  summarise(mean_health = mean(health))
+nutrition_effect
+```
+
+
+```{r}
+ggplot(data, aes(x = sleep, y = health)) +
+  stat_summary(fun = mean, geom = "bar", fill = "lightblue", color = "black") +
+  labs(title = "Main Effect of Sleep", x = "Sleep", y = "Average Health") +
+  theme_minimal()
+
+ggplot(data, aes(x = exercise, y = health)) +
+  stat_summary(fun = mean, geom = "bar", fill = "lightgreen", color = "black") +
+  labs(title = "Main Effect of Exercise", x = "Exercise", y = "Average Health") +
+  theme_minimal()
+
+ggplot(data, aes(x = nutrition, y = health)) +
+  stat_summary(fun = mean, geom = "bar", fill = "lightcoral", color = "black") +
+  labs(title = "Main Effect of Nutrition", x = "Nutrition", y = "Average Health") +
+  theme_minimal()
+
+#Highlight the difference between the bars, annotate it
+
+```
+
+
+## Interactions
+```{r}
+interaction_effects <- data %>%
+  group_by(sleep, exercise, nutrition) %>%
+  summarise(mean_health = mean(health), .groups = 'drop')
+
+interaction_effects
+```
+
+
+```{r}
+# Function to generate summary based on interaction plot choice
+generate_summary <- function(plot_type, data) {
+  
+  if (plot_type == "sleep_exercise" | plot_type == "exercise_sleep") {
+    interaction.plot(sleep, exercise, health,  
+                     xlab = "Sleep", 
+                     ylab = "Health", trace.label = "Exercise")
+    
+    means <- tapply(data$health, list(data$sleep, data$exercise), mean)
+    sd <- tapply(data$health, list(data$sleep, data$exercise), sd)
+    
+    # Extract specific scenarios for the summary
+    mod_insuf <- means["Insufficient", "Moderate"]
+    mod_suf <- means["Sufficient", "Moderate"]
+    int_suf <- means["Sufficient", "Strenuous"]
+    
+    # Extract standard deviations for these scenarios
+    mod_insuf_sd <- sd["Insufficient", "Moderate"]
+    mod_suf_sd <- sd["Sufficient", "Moderate"]
+    int_suf_sd <- sd["Sufficient", "Strenuous"]
+    
+    # Calculate differences and approximate percentage improvement
+    diff_health <- int_suf - mod_insuf
+    pct_improve <- (diff_health / mod_insuf) * 100
+    
+    # Standard deviation-based health improvement
+    diff_health_sd <- (int_suf - mod_insuf) / mod_insuf_sd
+    
+    cat(paste0("In this simulation, going from moderate exercise with insufficient sleep (mean health =", 
+        round(mod_insuf, 2), ", SD =", round(mod_insuf_sd, 2), ") to strenuous exercise with sufficient sleep (mean health =", 
+        round(int_suf, 2), ", SD =", round(int_suf_sd, 2), ") increases your health score by an average of ", 
+        round(diff_health, 2), " units, corresponding to an approximate ",
+        round(diff_health_sd, 2), " sample standard deviation(s) or a ",
+        round(pct_improve, 1),"% health improvement.\n"))
+    
+  } else if (plot_type == "nutrition_sleep" | plot_type == "sleep_nutrition") {
+    interaction.plot(nutrition, sleep, health,  
+                     xlab = "Nutrition", 
+                     ylab = "Health", trace.label = "Sleep")
+    
+    means <- tapply(data$health, list(data$nutrition, data$sleep), mean)
+    sd <- tapply(data$health, list(data$nutrition, data$sleep), sd)
+    
+    # Extract specific scenarios for the summary
+    mod_insuf_nut <- means["Mindless", "Insufficient"]
+    mod_suf_nut <- means["Mindless", "Sufficient"]
+    int_suf_nut <- means["Purposeful", "Sufficient"]
+    
+    # Extract standard deviations for these scenarios
+    mod_insuf_nut_sd <- sd["Mindless", "Insufficient"]
+    mod_suf_nut_sd <- sd["Mindless", "Sufficient"]
+    int_suf_nut_sd <- sd["Purposeful", "Sufficient"]
+    
+    # Calculate differences and approximate percentage improvement
+    diff_health <- int_suf_nut - mod_insuf_nut
+    pct_improve <- (diff_health / mod_insuf_nut) * 100
+    
+    # Standard deviation-based health improvement
+    diff_health_sd <- (int_suf_nut - mod_insuf_nut) / mod_insuf_nut_sd
+    
+    cat(paste0("In this simulation, going from mindless nutrition with insufficient sleep (mean health =", 
+        round(mod_insuf_nut, 2), ", SD =", round(mod_insuf_nut_sd, 2), ") to purposeful nutrition with sufficient sleep (mean health =", 
+        round(int_suf_nut, 2), ", SD =", round(int_suf_nut_sd, 2), ") increases your health score by an average of ", 
+        round(diff_health, 2), " units, corresponding to an approximate ",
+        round(diff_health_sd, 2), " sample standard deviation(s) or a ",
+        round(pct_improve, 1), "% health improvement.\n"))
+    
+  } else if (plot_type == "exercise_nutrition" | plot_type == "nutrition_exercise") {
+    interaction.plot(exercise, nutrition, health,  
+                     xlab = "Exercise", 
+                     ylab = "Health", trace.label = "Nutrition")
+    
+    means <- tapply(data$health, list(data$exercise, data$nutrition), mean)
+    sd <- tapply(data$health, list(data$exercise, data$nutrition), sd)
+    
+    # Extract specific scenarios for the summary
+    mod_insuf_mind <- means["Moderate", "Mindless"]
+    mod_suf_mind <- means["Moderate", "Purposeful"]
+    int_suf_purp <- means["Strenuous", "Purposeful"]
+    
+    # Extract standard deviations for these scenarios
+    mod_insuf_mind_sd <- sd["Moderate", "Mindless"]
+    mod_suf_mind_sd <- sd["Moderate", "Purposeful"]
+    int_suf_purp_sd <- sd["Strenuous", "Purposeful"]
+    
+    # Calculate differences and approximate percentage improvement
+    diff_health <- int_suf_purp - mod_insuf_mind
+    pct_improve <- (diff_health / mod_insuf_mind) * 100
+    
+    # Standard deviation-based health improvement
+    diff_health_sd <- (int_suf_purp - mod_insuf_mind) / mod_insuf_mind_sd
+    
+    cat("In this simulation, going from moderate exercise with mindless nutrition (mean health =", 
+        round(mod_insuf_mind, 2), ", SD =", round(mod_insuf_mind_sd, 2), ") to strenuous exercise with purposeful nutrition (mean health =", 
+        round(int_suf_purp, 2), ", SD =", round(int_suf_purp_sd, 2), ") increases your health score by an average of", 
+        round(diff_health, 2), " units, corresponding to an approximate ", 
+        round(diff_health_sd, 2), " sample standard deviation(s) or a ",
+        round(pct_improve, 1), "% health improvement.\n")
+    
+  } else {
+    cat("Invalid plot type. Please use a combination one of the following: 'sleep, exercise, and nutrition'.\n")
+  }
+}
+
+generate_summary("nutrition_exercise", data)
+```
+
+
+
+## Making Models
+```{r}
+linear <- lm(H ~ E+N+S)
+summary(linear)
+
+interaction <- lm(H ~ E*N*S)
+summary(interaction)
+
+anova(interaction, linear)
+
+```
+
+```{r}
+anova <- aov(H~E+N+S)
+anova
+
+int_aov <- aov(H~E*N*S)
+int_aov
+
+#names(anova)
+#anova$coefficients[]
+```
+
+# Equations
+```{r}
+# Health = 2.3834 + 0.9718*Exercise+1.0019*Nutrition+1.4653*Sleep
+
+# Health = 2.5048 + 0.3598*strenuous + 0.8043*purposeful + 1.4802*sufficient+1.1338*strenuous*purposeful+0.7087*strenuous*sufficient-0.1201*purposeful*sufficient-1.237*strenuous*purposeful*sufficient
+```
+
+
+### Three Factors Two Levels
+```{r}
+factors = 3
+levels = c(0,1)
+sleep = c()
+exercise = c()
+nutrition = c()
+
+for (k in 1:length(levels))
+  for (j in 1:length(levels)) {
+      for (i in 1:length(levels)) {
+      sleep = c(sleep, levels[i])
+      exercise = c(exercise, levels[j])
+      nutrition = c(nutrition, levels[k])
+    }
+  }
+
+threedf = data.frame(row.names = c(1:length(sleep)), sleep,exercise, nutrition)
+
+kable(threedf, row.names = T)  |>
+  kable_styling('striped',fixed_thead = T, full_width = F) |>
+    column_spec(2,color= 'white',
+              background = spec_color(threedf$sleep,end = 0.7, option = 'A' )) |>
+    column_spec(3,color= 'white',
+              background = spec_color(threedf$exercise ,end = 0.7, option = 'A' )) |>
+    column_spec(4,color= 'white',
+              background = spec_color(threedf$nutrition ,end = 0.7, option = 'A' )) |>
+    scroll_box(threedf, height = '400px')
+```
+
+
+## Surface Plot
+
+```{r}
+vertices <- data.frame(
+  x = c(0, 1, 1, 0, 0, 1, 1, 0), y = c(0, 0, 1, 1, 0, 0, 1, 1), z = c(0, 0, 0, 0, 1, 1, 1, 1))
+
+edges <- list(c(1,2), c(2,3), c(3,4), c(4,1), c(5,6), c(6,7), c(7,8), c(8,5), c(1,5), c(2,6), c(3,7), c(4,8))
+
+p <- plot_ly(threedf, x = ~sleep, y = ~exercise, z = ~nutrition)
+
+for(edge in edges) {
+
+  p <- add_trace(p,
+
+                 x = vertices$x[edge],
+
+                 y = vertices$y[edge],
+
+                 z = vertices$z[edge],
+
+                 type = "scatter3d",
+
+                 mode = "lines",
+
+                 line = list(width = 4, color = "#1f77b4")
+
+  )
+
+}
+
+p <- add_trace(p,
+
+               x = vertices$x,
+
+               y = vertices$y,
+
+               z = vertices$z,
+
+               type = "scatter3d",
+
+               mode = "markers",
+
+               marker = list(size = 5, color = "#ff7f0e")
+
+)
+
+p <- add_trace(p, text = c("Sleep: Low, Exercise: Low, Nutrition: Low", "Sleep: High, Exercise: Low, Nutrition: Low", "Sleep: Low, Exercise: High, Nutrition: Low", "Sleep: High, Exercise: High, Nutrition: Low", "Sleep: Low, Exercise: Low, Nutrition: High", "Sleep: High, Exercise: Low, Nutrition: High", "Sleep: Low, Exercise: High, Nutrition: High", "Sleep: High, Exercise: High, Nutrition: High")) 
+
+p <- layout(p,
+
+            scene = list(
+
+              xaxis = list(title = "Sleep", range = c(0, 1)),
+
+              yaxis = list(title = "Exercise", range = c(0, 1)),
+
+              zaxis = list(title = "Nutrition", range = c(0, 1)),
+
+              aspectmode = "cube"  # ensures equal aspect ratio
+
+            ),
+
+            title = "2^3 Factorial Design Plot",
+            showlegend = FALSE
+
+)
+
+p
+
+```
+
+## Surface Plot
+```{r}
+grid_data <- expand.grid(sleep = unique(data$sleep), 
+                         exercise = unique(data$exercise), 
+                         nutrition = unique(data$nutrition))
+
+# Create a matrix of health values based on the combinations of sleep, exercise, and nutrition
+health_matrix <- matrix(NA, nrow = length(unique(data$sleep)), 
+                        ncol = length(unique(data$exercise)))
+
+# Fill the matrix with mean health values for each combination
+for (i in 1:nrow(grid_data)) {
+  sleep_level <- grid_data$sleep[i]
+  exercise_level <- grid_data$exercise[i]
+  nutrition_level <- grid_data$nutrition[i]
+  
+  # Subset data and calculate the mean health for the combination of factors
+  mean_health <- mean(data$health[data$sleep == sleep_level & 
+                                             data$exercise == exercise_level & 
+                                             data$nutrition == nutrition_level])
+  health_matrix[sleep_level + 1, exercise_level + 1] <- mean_health
+}
+
+# Create the surface plot using plotly
+plot_ly(x = unique(data$sleep), 
+        y = unique(data$exercise), 
+        z = health_matrix, 
+        type = "surface") %>%
+  layout(title = "Surface Plot of Health vs. Sleep, Exercise, and Nutrition",
+         scene = list(xaxis = list(title = "Sleep"),
+                      yaxis = list(title = "Exercise"),
+                      zaxis = list(title = "Health")))
+```
+
+
+```{r}
+factors = 6
+levels = c(0,1)
+sleep = c()
+exercise = c()
+nutrition = c()
+spirituality = c()
+community = c()
+mental = c()
+
+for (k in 1:length(levels))
+  for (j in 1:length(levels)) {
+      for (i in 1:length(levels)) {
+        for(l in 1:length(levels)){
+          for(m in 1:length(levels)) {
+            for(n in 1:length(levels)){
+      sleep = c(sleep, levels[i])
+      exercise = c(exercise, levels[j])
+      nutrition = c(nutrition, levels[k])
+      spirituality = c(spirituality, levels[l])
+      community = c(community, levels[m])
+      mental = c(mental, levels[n])
+            }
+          }
+        }
+    }
+  }
+
+sixdf = data.frame(row.names = c(1:length(sleep)), sleep,exercise, nutrition, spirituality, community, mental)
+
+kable(sixdf, row.names = T)  |>
+  kable_styling('striped',fixed_thead = T, full_width = F) |>
+    column_spec(2,color= 'white',
+              background = spec_color(sixdf$sleep,end = 0.7, option = 'A' )) |>
+    column_spec(3,color= 'white',
+              background = spec_color(sixdf$exercise,end = 0.7, option = 'A' )) |>
+    column_spec(4,color= 'white',
+              background = spec_color(sixdf$nutrition,end = 0.7, option = 'A' )) |>
+    column_spec(5,color= 'white',
+              background = spec_color(sixdf$spirituality,end = 0.7, option = 'A' )) |>
+    column_spec(6,color= 'white',
+              background = spec_color(sixdf$community ,end = 0.7, option = 'A' )) |>
+    column_spec(7,color= 'white',
+              background = spec_color(sixdf$mental ,end = 0.7, option = 'A' )) |>
+    scroll_box(sixdf, height = '400px')
+```
+
+
+
+

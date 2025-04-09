@@ -16,11 +16,11 @@ factor_names <- names(factor_labels)
 #Change these to Change Interaction Plot Specific Factors
   factors_plot_labels <- list(
     "Sleep" = "Sleep Hours",
-    "Exercise" = "Exercise Intensity",
-    "Nutrition" = "Nutrition Intention",
+    "Exercise" = "Exercise",
+    "Nutrition" = "Nutrition",
     "Spirituality" = "Spiritual Engagement",
     "Socialization" = "Social Connection",
-    "Wellbeing" = "Wellbeing Intention"
+    "Wellbeing" = "Wellbeing"
   )
   
   lookupFactors <- function(){

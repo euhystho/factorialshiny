@@ -1,6 +1,7 @@
 library(bslib)
 library(bsicons)
 library(plotly)
+library(echarts4r)
 
 # Global Variables, adjust if needed:
 min_plot_height <- 625
@@ -49,7 +50,7 @@ plot_card <- list(
           showcase = bs_icon("heart-pulse-fill"),
         )
       ),
-      plotOutput("interaction_plot")
+      echarts4rOutput("interaction_plot")
     )
   ),
   card(
