@@ -408,14 +408,15 @@ server <- function(input, output, session) {
       NULL
     
     # Set default factor labels
-    firstFactorLabels <- c("Low", "High")  # nolint
+    firstFactorLabels <- c("Low", "High")  
     secondFactorLabels <- c("Low", "High") 
     thirdFactorLabels <- c("Low", "High")
+    
+    levels <- rep(2,numSelectedFactors)
     
     # Handle different numbers of factors
     if (numSelectedFactors == 3) {
       # For 3 factors
-      levels <- c(2, 2, 2)
       factorNames <- c(first_factor, second_factor, third_factor)
       factorLabels <- labelFactors(input$factors, factor_labels)
       
@@ -521,7 +522,6 @@ server <- function(input, output, session) {
       
     } else if (numSelectedFactors == 2) {
       # For 2 factors
-      levels <- c(2, 2)
       factorNames <- c(first_factor, second_factor)
       factorLabels <- labelFactors(input$factors, factor_labels)
       
