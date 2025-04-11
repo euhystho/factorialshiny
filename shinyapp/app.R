@@ -575,21 +575,28 @@ server <- function(input, output, session) {
     numSelectedFactors = length(input$factors)
     factorCalc()
     df <- f$data
+    
     A <- df$factorA
     B <- df$factorB
     C <- df$factorC
+    D <- df$factorD
+    E <- df$factorE
     H <- df$health
     
-    if (numSelectedFactors == 2){
-      model <- lm(H ~ A*B, data = df, 
-                  contrasts = list(A = contr.FrF2, B = contr.FrF2))
-    } else if (numSelectedFactors == 3){
-      model <- lm(H ~ A*B*C, data = df, 
-                  contrasts = list(A = contr.FrF2, B = contr.FrF2, C = contr.FrF2))
+    factors <- c("A", "B", "C", "D", "E")  # List all possible factors
+    selected_factors <- factors[1:numSelectedFactors]
+    if (numSelectedFactors >= 2){
+      formula_str <- paste("H ~", paste(selected_factors, collapse="*"))
+      contrasts_list <- setNames(
+        replicate(numSelectedFactors, contr.FrF2, simplify = FALSE),
+        selected_factors
+      )
+      model <- lm(as.formula(formula_str), data = df, contrasts = contrasts_list)
     }
-    
     return(model)
   })
+  
+  
   
   # Function to generate summary without creating plots
   generate_summary <- reactive({
