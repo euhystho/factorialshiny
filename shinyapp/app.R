@@ -54,7 +54,7 @@ ui <- page_sidebar(
     ),
     checkboxGroupButtons(
       "factors",
-      "Select the following subfactors:",
+      "Select the following categories:",
       choices = c("Nutrition", "Sleep", "Exercise", "Spirituality", "Socialization", "Wellbeing"),
       selected = c("Nutrition","Sleep"),
       justified = TRUE,
@@ -72,7 +72,7 @@ ui <- page_sidebar(
         icon = bs_icon("heart-pulse-fill"),
         checkboxGroupButtons(
           "phys",
-          "Select the following subfactors:",
+          "Select to display the following subfactors:",
           choices = c("Nutrition", "Sleep", "Exercise"),
           selected = c("Nutrition","Sleep"),
           size = 'sm',
@@ -165,7 +165,6 @@ ui <- page_sidebar(
               value = 0,
             ),
           ),
-          # Added missing comma here
         ),
         conditionalPanel(
           condition = "input.phys.includes('Exercise')",
@@ -390,185 +389,64 @@ server <- function(input, output, session) {
   )
   
   factorCalc <- reactive({
-    # Create a vector of the number of levels for each factor
-    numSelectedFactors = length(input$factors)
-    
-    # Get selected factors
-    first_factor <- if (numSelectedFactors >= 1)
-      input$factors[1]
-    else
-      NULL
-    second_factor <- if (numSelectedFactors >= 2)
-      input$factors[2]
-    else
-      NULL
-    third_factor <- if (numSelectedFactors >= 3)
-      input$factors[3]
-    else
-      NULL
-    
-    # Set default factor labels
-    firstFactorLabels <- c("Low", "High")  
-    secondFactorLabels <- c("Low", "High") 
-    thirdFactorLabels <- c("Low", "High")
-    
-    levels <- rep(2,numSelectedFactors)
-    
-    # Handle different numbers of factors
-    if (numSelectedFactors == 3) {
-      # For 3 factors
-      factorNames <- c(first_factor, second_factor, third_factor)
-      factorLabels <- labelFactors(input$factors, factor_labels)
-      
-      firstFactorLow <- factorLabels[[1]][[1]]
-      firstFactorHigh <- factorLabels[[1]][[2]]
-      
-      secondFactorLow <- factorLabels[[2]][[1]]
-      secondFactorHigh <- factorLabels[[2]][[2]]
-      
-      thirdFactorLow <- factorLabels[[3]][[1]]
-      thirdFactorHigh <- factorLabels[[3]][[2]]
-      
-      # Create the factor vectors for a 3-factor design
-      # Each combination needs 15 repetitions
-      factorA <- c(
-        rep(firstFactorLow, 15),
-        # A low, B low, C low
-        rep(firstFactorHigh, 15),
-        # A high, B low, C low
-        rep(firstFactorLow, 15),
-        # A low, B high, C low
-        rep(firstFactorHigh, 15),
-        # A high, B high, C low
-        rep(firstFactorLow, 15),
-        # A low, B low, C high
-        rep(firstFactorHigh, 15),
-        # A high, B low, C high
-        rep(firstFactorLow, 15),
-        # A low, B high, C high
-        rep(firstFactorHigh, 15)   # A high, B high, C high
-      )
-      
-      factorB <- c(
-        rep(secondFactorLow, 15),
-        # A low, B low, C low
-        rep(secondFactorLow, 15),
-        # A high, B low, C low
-        rep(secondFactorHigh, 15),
-        # A low, B high, C low
-        rep(secondFactorHigh, 15),
-        # A high, B high, C low
-        rep(secondFactorLow, 15),
-        # A low, B low, C high
-        rep(secondFactorLow, 15),
-        # A high, B low, C high
-        rep(secondFactorHigh, 15),
-        # A low, B high, C high
-        rep(secondFactorHigh, 15)  # A high, B high, C high
-      )
-      
-      factorC <- c(
-        rep(thirdFactorLow, 15),
-        # A low, B low, C low
-        rep(thirdFactorLow, 15),
-        # A high, B low, C low
-        rep(thirdFactorLow, 15),
-        # A low, B high, C low
-        rep(thirdFactorLow, 15),
-        # A high, B high, C low
-        rep(thirdFactorHigh, 15),
-        # A low, B low, C high
-        rep(thirdFactorHigh, 15),
-        # A high, B low, C high
-        rep(thirdFactorHigh, 15),
-        # A low, B high, C high
-        rep(thirdFactorHigh, 15)   # A high, B high, C high
-      )
-      
-      # Generate simulated health data for a 3-factor design
-      # Adjust means for different combinations to simulate various effects
-      health <- c(
-        rnorm(15, 2.5, 2.5),
-        # A low, B low, C low
-        rnorm(15, 3.0, 2.5),
-        # A high, B low, C low
-        rnorm(15, 3.5, 2.5),
-        # A low, B high, C low
-        rnorm(15, 4.0, 2.5),
-        # A high, B high, C low
-        rnorm(15, 3.2, 2.5),
-        # A low, B low, C high
-        rnorm(15, 3.7, 2.5),
-        # A high, B low, C high
-        rnorm(15, 4.2, 2.5),
-        # A low, B high, C high
-        rnorm(15, 4.7, 2.5)   # A high, B high, C high
-      )
-      
-      # Create data frame with all three factors
-      data <- data.frame(factorA, factorB, factorC, health)
-      
-      # Generate the full factorial design
-      design <- gen.factorial(levels, nVars = numSelectedFactors, varNames = factorNames)
-      
-      # Extract variables for analysis
-      A <- data$factorA
-      B <- data$factorB
-      C <- data$factorC
-      H <- data$health
-      
-      # Run ANOVA with all three factors and their interactions
-      f$result <- aov(H ~ A * B * C)
-      
-    } else if (numSelectedFactors == 2) {
-      # For 2 factors
-      factorNames <- c(first_factor, second_factor)
-      factorLabels <- labelFactors(input$factors, factor_labels)
-      
-      firstFactorLow <- factorLabels[[1]][[1]]
-      firstFactorHigh <- factorLabels[[1]][[2]]
-      
-      secondFactorLow <- factorLabels[[2]][[1]]
-      secondFactorHigh <- factorLabels[[2]][[2]]
-      
-      factorA <- c(
-        rep(firstFactorLow, 15),
-        rep(firstFactorHigh, 15),
-        rep(firstFactorLow, 15),
-        rep(firstFactorHigh, 15)
-      )
-      
-      factorB <- c(
-        rep(secondFactorLow, 15),
-        rep(secondFactorLow, 15),
-        rep(secondFactorHigh, 15),
-        rep(secondFactorHigh, 15)
-      )
-      
-      # Generate simulated health data
-      health <- c(rnorm(15, 2.5, 2.5),
-                  rnorm(15, 3.0, 2.5),
-                  rnorm(15, 3.5, 2.5),
-                  rnorm(15, 4.0, 2.5))
-      
-      # Create data frame with two factors
-      data <- data.frame(factorA, factorB, health)
-      
-      # Generate the full factorial design
-      design <- gen.factorial(levels, nVars = numSelectedFactors, varNames = factorNames)
-      
-      # Extract variables for analysis
-      A <- data$factorA
-      B <- data$factorB
-      H <- data$health
-      
-      # Run ANOVA with two factors
-      f$result <- aov(H ~ A * B)
+    numSelectedFactors <- length(input$factors)
+    if (numSelectedFactors < 2 || numSelectedFactors > 6) {
+      showNotification("Please select 2 to 6 factors to display the interaction plot")
+      stop("Please select 2 to 6 factors")
     }
     
-    # Store the data in the reactiveValues
+    factorLabels <- labelFactors(input$factors, factor_labels)
+    levels <- rep(2, numSelectedFactors)
+    design <- gen.factorial(levels, nVars = numSelectedFactors, varNames = input$factors)
+    
+    factorLevels <- lapply(seq_len(numSelectedFactors), function(i) {
+      list(low = factorLabels[[i]][[1]], high = factorLabels[[i]][[2]])
+    })
+    
+    names(factorLevels) <- input$factors
+    
+    ind_combinations <- expand.grid(factorLevels)
+    
+    # Create effect indicators for each combination (0 for low, 1 for high)
+    effect_df <- data.frame(row.names = 1:nrow(ind_combinations))
+    for (i in 1:numSelectedFactors) {
+      factor <- input$factors[i]
+      high_label <- factorLabels[[i]][[2]]
+      effect_df[[factor]] <- ifelse(ind_combinations[[factor]] == high_label, 1, 0)
+    }
+    effect_matrix <- as.matrix(effect_df)
+    
+    combinations <- expand.grid(lapply(factorLevels, function(lvl) c(lvl$low, lvl$high)))
+    expandedCombinations <- do.call(rbind, replicate(15, combinations, simplify = FALSE))
+    factorNames <- paste0("factor", LETTERS[1:numSelectedFactors])
+    colnames(expandedCombinations) <- factorNames
+    
+    row <- which(weights$name == input$person)
+    ind_weights <- as.numeric(weights[row, input$factors])
+    
+    # Calculate mean health scores for the individual
+    sigma <- 1  # Adjust as needed
+    mean_health <- effect_matrix %*% ind_weights
+    
+    mean_health_expanded <- rep(mean_health, each = 15)
+    health <- mean_health_expanded + rnorm(length(mean_health_expanded), 0, sigma)
+    
+    data <- cbind(expandedCombinations, health = health)
+    
+    anovaVars <- LETTERS[1:numSelectedFactors]
+    anovaFormula <- as.formula(
+      paste("health ~", paste(anovaVars, collapse = " * "))
+    )
+    
+    for (i in 1:numSelectedFactors) {
+      assign(anovaVars[i], data[[factorNames[i]]])
+    }
+    H <- data$health
+    
+    f$result <- aov(anovaFormula, data = data)
     f$design <- design
     f$data <- data
+    
   })
   
   getModel <- reactive({
@@ -581,9 +459,10 @@ server <- function(input, output, session) {
     C <- df$factorC
     D <- df$factorD
     E <- df$factorE
+    F <- df$factorF
     H <- df$health
     
-    factors <- c("A", "B", "C", "D", "E")  # List all possible factors
+    factors <- c("A", "B", "C", "D", "E", "F")  # List all possible factors
     selected_factors <- factors[1:numSelectedFactors]
     if (numSelectedFactors >= 2){
       formula_str <- paste("H ~", paste(selected_factors, collapse="*"))
@@ -595,8 +474,6 @@ server <- function(input, output, session) {
     }
     return(model)
   })
-  
-  
   
   # Function to generate summary without creating plots
   generate_summary <- reactive({
@@ -731,11 +608,6 @@ server <- function(input, output, session) {
   
   output$interaction_plot <- renderEcharts4r({
     numFactors <- length(input$factors)
-    if (numFactors < 2 || numFactors == 3) {
-      plot(0, 0, type = "n", axes = FALSE, ann = FALSE)
-      text(0, 0, "Please select 2 subfactors under the Physical Health panel!", cex = 1.5)
-      return()
-    }
     
     factorCalc()
     df <- f$data
@@ -743,51 +615,62 @@ server <- function(input, output, session) {
     # Use the selected dimensions for plot labels
     labels <- labelFactors(input$factors, factors_plot_labels)
     
-    # Summarize the data to get means for each combination (similar to interaction.plot)
-    sum_df <- df %>%
-      group_by(factorA, factorB) %>%
-      summarise(Mean_Health = mean(health), .groups = 'keep') %>%
-      ungroup()
+    # Create a placeholder empty chart
+    empty_chart <- data.frame(x = 1, y = 1) %>%
+      e_charts(x) %>%
+      e_scatter(y, symbol_size = 0) %>%  # Invisible point
+      e_title(text = "Interaction Plot", 
+              subtext = "Please select exactly two factors to display an interaction plot") %>%
+      e_x_axis(show = FALSE) %>%
+      e_y_axis(show = FALSE) %>%
+      e_grid(left = "15%", right = "15%", top = "20%", bottom = "15%")
     
-    plot <- sum_df %>%
-      group_by(factorB) %>%
-      e_charts(x = factorA) %>%  
-      e_line(serie = Mean_Health, legend = TRUE) %>%  
-      e_aria(enabled = TRUE, decal = list(show = TRUE)) %>%
-      e_tooltip(trigger = "axis") %>%  # Show tooltip on hover
-      e_title(text = "Interaction Plot") %>%  # Title
-      e_x_axis(name = labels[1]) %>%  # X-axis label
-      e_y_axis(name = "Health") %>%  # Y-axis label
-      e_toolbox_feature("dataZoom") %>%
-      e_toolbox_feature(feature = "reset") %>%
-      e_legend(formatter = paste0("{name} ", labels[2]))  # Legend title
-    plot
-    # interaction.plot(
-    #   df$factorA, 
-    #   df$factorB, 
-    #   df$health,
-    #   xlab = labels[1],
-    #   ylab = "Overall Health Score",
-    #   trace.label = labels[2]
-    # )
+    if (numFactors == 2) {
+      # Summarize the data to get means for each combination
+      sum_df <- df %>%
+        group_by(factorA, factorB) %>%
+        summarise(Mean_Health = mean(health), .groups = 'keep') %>%
+        ungroup()
+      
+      plot <- sum_df %>%
+        group_by(factorB) %>%
+        e_charts(x = factorA) %>%  
+        e_line(serie = Mean_Health, legend = TRUE) %>%  
+        e_aria(enabled = TRUE, decal = list(show = TRUE)) %>%
+        e_tooltip(trigger = "axis") %>%
+        e_title(text = "Interaction Plot") %>%
+        e_x_axis(name = labels[1]) %>%
+        e_y_axis(name = "Health") %>%
+        e_toolbox_feature("dataZoom") %>%
+        e_toolbox_feature(feature = "reset") %>%
+        e_legend(formatter = paste0("{name} ", labels[2]))
+      
+      return(plot)
+    } else {
+      empty_chart <- empty_chart %>%
+              e_legend(show = FALSE)
+      # Instead of just showing a notification, return a placeholder chart with a message
+      showNotification("Please select two factors to display values in the interaction plot!")
+      return(empty_chart)
+    }
   })
   
   output$factorial <- renderPlotly({
     # Create factorial design grid
     df <- expand.grid(
-      factorA = c(0, 1),
-      factorB = c(0, 1),
-      factorC = c(0, 1)
+      factorA = c(-1, 1),
+      factorB = c(-1, 1),
+      factorC = c(-1, 1)
     )
     
     # Add hover text using dynamic factor_names
-    df$factorA_text <- ifelse(df$factorA == 0, 
+    df$factorA_text <- ifelse(df$factorA == -1, 
                               factor_labels[[factor_names[1]]][[1]], 
                               factor_labels[[factor_names[1]]][[2]])
-    df$factorB_text <- ifelse(df$factorB == 0, 
+    df$factorB_text <- ifelse(df$factorB == -1, 
                               factor_labels[[factor_names[2]]][[1]], 
                               factor_labels[[factor_names[2]]][[2]])
-    df$factorC_text <- ifelse(df$factorC == 0, 
+    df$factorC_text <- ifelse(df$factorC == -1, 
                               factor_labels[[factor_names[3]]][[1]], 
                               factor_labels[[factor_names[3]]][[2]])
     

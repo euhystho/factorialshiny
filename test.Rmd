@@ -4,48 +4,99 @@ output: html_document
 ---
 
 ```{r}
-# Your existing code (unchanged)
-# Create a vector column for thickness 
-health2 <- c(rnorm(15, 4.5, 2.5), rnorm(15, 3.5, 2.5), rnorm(15, 5.5, 2.5), rnorm(15, 2.5, 2.5))
-# Create the factors 
-sleep2 <- c(rep("Insufficient",15), 
-            rep("Sufficient",15), 
-            rep("Sufficient",15), 
-            rep("Insufficient",15)) 
-exercise2 <- c(rep("Strenuous",15), 
-               rep("Moderate",15), 
-               rep("Strenuous",15), 
-               rep("Moderate",15)) 
-# Merge the data into a dataset 'data' 
-data <- data.frame(sleep2, 
-                   exercise2, 
-                   health2) 
-A <- data$sleep2 
-B <- data$exercise2 
-Z <- data$health2 
-# Load required packages
-library(echarts4r)
-library(dplyr)
-# Summarize the data to get means for each combination (similar to interaction.plot)
-summary_data <- data %>%
-  group_by(sleep2, exercise2) %>%
-  summarise(Mean_Health = mean(health2)) %>%
-  ungroup()
+library(AlgDesign)
 
-# Create an interactive line chart using echarts4r with different line styles per exercise type
-plot <- summary_data %>%
-  group_by(exercise2) %>%
-  e_charts(x = sleep2) %>%  # X-axis: sleep levels
-  e_line(serie = Mean_Health, 
-         legend = TRUE) %>%
-  e_aria(enabled = TRUE, decal = list(show = TRUE)) %>%
-  e_tooltip(trigger = "axis") %>%  # Show tooltip on hover
-  e_title(text = "Interaction Plot") %>%  # Title
-  e_x_axis(name = "Sleep") %>%  # X-axis label
-  e_y_axis(name = "Health") %>%  # Y-axis label
-  e_grid(right= '15%') %>%
-  e_legend(orient = 'vertical', right = 10, top = '15%', 
-           formatter = "{name} Sleep")
-plot
+# Define the labelFactors function
+labelFactors <- function(selected_factors, label_type) {
+  num_factors <- length(selected_factors)
+  labels <- lapply(selected_factors[1:num_factors], function(factor) {
+    if (factor %in% names(label_type)) {
+      return(label_type[[factor]])
+    }
+  })
+  return(labels)
+}
+
+# Define factor labels
+factor_labels <- list(
+  "Sleep" = list("Insufficient", "Sufficient"),
+  "Exercise" = list("Light", "Intense"),
+  "Nutrition" = list("Mindless", "Purposeful"),
+  "Spirituality" = list("Infrequent", "Regular"),
+  "Socialization" = list("Isolated", "Outgoing"),
+  "Wellbeing" = list("Neglect", "Nurture")
+)
+
+# Set selected factors
+selectedFactors <- c("Nutrition", "Sleep", "Exercise")
+numSelectedFactors <- length(selectedFactors)
+
+# Validate number of factors
+if (numSelectedFactors < 2 || numSelectedFactors > 6) {
+  stop("Please select 2 to 6 factors")
+}
+
+# Get factor labels for selected factors
+factorLabels <- labelFactors(selectedFactors, factor_labels)
+
+# Define factor levels with proper names
+factorLevels <- lapply(seq_len(numSelectedFactors), function(i) {
+  c(factorLabels[[i]][[1]], factorLabels[[i]][[2]])
+})
+# Name the factorLevels list with selectedFactors
+names(factorLevels) <- selectedFactors
+
+# Generate all combinations of factor levels with correct column names
+combinations <- expand.grid(factorLevels)
+
+# Create effect indicators for each combination (0 for low, 1 for high)
+effect_df <- data.frame(row.names = 1:nrow(combinations))
+for (i in 1:numSelectedFactors) {
+  factor <- selectedFactors[i]
+  high_label <- factorLabels[[i]][[2]]
+  effect_df[[factor]] <- ifelse(combinations[[factor]] == high_label, 1, 0)
+}
+
+# Convert to matrix
+effect_matrix <- as.matrix(effect_df)
+
+# Verify effect_df
+print("Effect_df:")
+print(effect_df)
+
+# Load individual weights from RDS file
+# Replace with your actual RDS file path
+individual_weights <- readRDS("shinyapp/Data/ind_weights.rds")
+required_cols <- c("name", selectedFactors)
+if (!all(required_cols %in% colnames(individual_weights))) {
+  stop("RDS file must contain 'name' and all selected factor columns")
+}
+
+# Process each individual (continuing with your health score and ANOVA logic)
+sigma <- 1
+for (ind in 1:nrow(individual_weights)) {
+  weights <- as.numeric(individual_weights[ind, selectedFactors])
+  mean_health <- effect_matrix %*% weights
+  mean_health_expanded <- rep(mean_health, each = 15)
+  health <- mean_health_expanded + rnorm(length(mean_health_expanded), 0, sigma)
+  
+  
+  expandedCombinations <- do.call(rbind, replicate(15, combinations, simplify = FALSE))
+  factorNames <- paste0("factor", LETTERS[1:numSelectedFactors])
+  colnames(expandedCombinations) <- factorNames
+  
+  data <- cbind(expandedCombinations, health = health)
+  anovaVars <- LETTERS[1:numSelectedFactors]
+  for (i in 1:numSelectedFactors) {
+    assign(anovaVars[i], data[[factorNames[i]]])
+  }
+  anovaFormula <- as.formula(
+    paste("health ~", paste(anovaVars, collapse = " * "))
+  )
+  result <- aov(anovaFormula, data = data)
+  cat(sprintf("\nANOVA for %s:\n", individual_weights$name[ind]))
+  print(summary(result))
+}
 ```
+
 

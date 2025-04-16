@@ -1,6 +1,7 @@
 library(stringr)
 
 individuals <- readRDS("Data/ind_data.rds")
+weights <- readRDS("Data/ind_weights.rds")
 
 #Just modify this to change factors for everything :)
 factor_labels <- list(
@@ -69,39 +70,50 @@ labelFactors <- function(selected_factors, label_type) {
   return(labels)
 }
 
-#Assign the Selected Factors to the Table to make it User-Friendly
-labelTableFactors <- function(df, selected_factors){
-    if (length(selected_factors) == 2) {
-      row.names(df)[1:3] = c(selected_factors[1], 
-      selected_factors[2], 
-      paste0(selected_factors[1], ":", selected_factors[2]))
-    } else if (length(selected_factors) == 3) {
-      row.names(df)[1:7] = c(
-        selected_factors[1],
-        selected_factors[2],
-        selected_factors[3],
-        paste0(selected_factors[1], ":", selected_factors[2]),
-        paste0(selected_factors[1], ":", selected_factors[3]),
-        paste0(selected_factors[2], ":", selected_factors[3]),
-        paste0(
-          selected_factors[1],
-          ":",
-          selected_factors[2],
-          ":",
-          selected_factors[3]
-        )
-      )
-    }
-    return(df)
+labelTableFactors <- function(df, selected_factors) {
+  # Get all possible combinations of factors
+  all_combinations <- list()
+  
+  # Generate all possible combinations of the selected factors
+  for (i in 1:length(selected_factors)) {
+    # Get all combinations of length i
+    combinations <- combn(selected_factors, i, simplify = FALSE)
+    
+    # Add each combination to the list
+    all_combinations <- c(all_combinations, combinations)
+  }
+  
+  # Create row names by joining the factors in each combination with ":"
+  row_names <- sapply(all_combinations, function(combo) {
+    paste(combo, collapse = ":")
+  })
+  
+  # Check if the number of combinations matches the expected rows
+  numCombinations <- (2^length(selected_factors)) - 1
+  if (length(row_names) != numCombinations) {
+    warning("Number of generated row names does not match expected number of combinations")
+  }
+  
+  # Assign row names to the dataframe
+  if (nrow(df) >= numCombinations) {
+    row.names(df)[1:numCombinations] <- row_names
+  } else {
+    warning("Dataframe has fewer rows than the number of factor combinations")
+    row.names(df)[1:nrow(df)] <- row_names[1:nrow(df)]
+  }
+  
+  return(df)
 }
-
 
 #Assign the Selected Factors to the Effect Plot to make it User-Friendly
 formatSigEffect <- function(labels, selected_factors){
 # Abbreviate Nutrition as Nutr, Exercise as Ex, and Sleep is Sleep
-  labels <- gsub("A1", selected_factors[1], labels)
-  labels <- gsub("B1", selected_factors[2], labels)
-  labels <- gsub("C1", selected_factors[3], labels)
+  labels <- gsub("A1", substr(selected_factors[1], 1, 2), labels)
+  labels <- gsub("B1", substr(selected_factors[2], 1, 2), labels)
+  labels <- gsub("C1", substr(selected_factors[3], 1, 2), labels)
+  labels <- gsub("D1", substr(selected_factors[4], 1, 2), labels)
+  labels <- gsub("E1", substr(selected_factors[5], 1, 2), labels)
+  labels <- gsub("F1", substr(selected_factors[6], 1, 2), labels)
   return(labels)
 }
 

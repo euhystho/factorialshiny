@@ -1,0 +1,76 @@
+[
+  {
+    "name": "Sarah 👩🏻‍💼",
+    "Nutrition": 1.2,
+    "Sleep": 1.11,
+    "Exercise": 1.15,
+    "Spirituality": 1.1,
+    "Socialization": 1.25,
+    "Wellbeing": 1.5
+  },
+  {
+    "name": "Monique 👩🏾‍🏫",
+    "Nutrition": 1.01,
+    "Sleep": 1.25,
+    "Exercise": 1.2,
+    "Spirituality": 1,
+    "Socialization": 1.5,
+    "Wellbeing": 1.25
+  },
+  {
+    "name": "Jenny 👩🏼‍🎨",
+    "Nutrition": 1.5,
+    "Sleep": 0.8,
+    "Exercise": 1.25,
+    "Spirituality": 1,
+    "Socialization": 0.9,
+    "Wellbeing": 1.3
+  },
+  {
+    "name": "Lori 👩🏽‍⚕️",
+    "Nutrition": 1,
+    "Sleep": 0.7,
+    "Exercise": 1.15,
+    "Spirituality": 1.3,
+    "Socialization": 1.4,
+    "Wellbeing": 1.25
+  },
+
+  {
+    "name": "Kelly 👩🏼‍💼",
+    "Nutrition": 1,
+    "Sleep": 1,
+    "Exercise": 1,
+    "Spirituality": 1.5,
+    "Socialization": 1.3,
+    "Wellbeing": 1.2
+  },
+  {
+    "name": "Amy 👩🏻‍🏫",
+    "Nutrition": 1.4,
+    "Sleep": 0.8,
+    "Exercise": 1.5,
+    "Spirituality": 1,
+    "Socialization": 1.25,
+    "Wellbeing": 1.2
+  },
+
+  {
+    "name": "Melissa 👩🏾‍💻",
+    "Nutrition": 1,
+    "Sleep": 1.4,
+    "Exercise": 1.6,
+    "Spirituality": 1.25,
+    "Socialization": 1.4,
+    "Wellbeing": 1.4
+  },
+  {
+    "name": "Lisa 👩🏼‍🏫",
+    "Nutrition": 1.3,
+    "Sleep": 1,
+    "Exercise": 1.5,
+    "Spirituality": 1.6,
+    "Socialization": 1.4,
+    "Wellbeing": 1.5
+  }
+]
